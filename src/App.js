@@ -5,24 +5,21 @@ import {BrowserRouter, Routes, Route, Switch } from 'react-router-dom';
 import Home from './components/home/Home';
 import AllClaims from './components/allclaims/AllClaims';
 import ClaimProfile from './components/claimprofile/ClaimProfile';
+import Sidebar from './components/claimprofile/Sidebar';
 
 
 function App() {
   return (
     <BrowserRouter>
     <Routes>
-   
-   
-   <Route path='/home' element = {
-<Home/> } />
-<Route path='/allclaims' element = {
-  <AllClaims/>} />
-
-
-<Route path='/test' element = {<ClaimProfile/>} />
-<Route path='/claims/:claimId' Component={ClaimProfile}/>
-    </Routes>
+        <Route path='/home' element={<Home />} />
+        <Route path='/allclaims' element={<AllClaims />} />
+        <Route path='/claims/:claimId' element={<ClaimProfile />} />
+        <Route path='/test' element={<Sidebar />} />
+      </Routes>
     </BrowserRouter>
+
+
   );
 }
 

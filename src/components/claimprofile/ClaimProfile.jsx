@@ -2,8 +2,9 @@ import React, {useState, useEffect} from 'react'
 import Sidebar from './Sidebar'
 import DocumentDataTable from '../documentdatatable/DocumentDataTable'
 import { useParams } from 'react-router';
+import AllClaims from '../allclaims/AllClaims';
 
-function ClaimProfile({claimsData}) {
+function ClaimProfile({claimsData, currentClaimNumber}) {
 
     // const [claimnumber, setClaimNumber] = useState('');
     // const [name, setName] = useState ('');
@@ -34,7 +35,7 @@ function ClaimProfile({claimsData}) {
   }
   return (
     <div>ClaimProfile
-        {<Sidebar claimsData = {claimsData} />}
+        {<Sidebar claimsId = {claim._id} />}
         {< DocumentDataTable claimsData = {claimsData}  className = '' />}
 
     </div>

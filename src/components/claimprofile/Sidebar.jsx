@@ -1,123 +1,61 @@
 import React, { useState, useEffect } from "react";
-import { useClaimContext } from "../claimcontext/ClaimContext";
+import AllClaims from "../allclaims/AllClaims";
+import ClaimProfile from "./ClaimProfile";
+import { useParams } from "react-router";
 
-async function fetchClaimData() {
-    try {
-      const response = await fetch('http://localhost:4000/new/list'); // replace with your actual API endpoint
-      if (response.ok) {
-        const data = await response.json();
-        return data;
-      } else {
-        console.error('Failed to fetch claims data');
-        return null;
-      }
-    } catch (error) {
-      console.error('Error fetching claims:', error);
-      return null;
-    }
-  }
-
-function getCurrentClaimNumberById(id, claimsData) {
-    const matchingClaim = claimsData.find(claim => claim._id === id);
-    return matchingClaim ? matchingClaim.claimNumber : "";
-}
-
-
-function Sidebar() {
+function Sidebar(currentClaimId) {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
   const [claimsData, setClaimsData] = useState([]);
-  const [currentClaimId, setCurrentClaimId] = useState("");
+  // const [claimnumber, setClaimNumber] = useState("");
   const [currentClaimNumber, setCurrentClaimNumber] = useState ('');
-  const {found} = useClaimContext();
-//   const {currentClaimNumber} = useClaimContext();
+ let {claimId} = useParams()
 
-//   useEffect(() => {
+  useEffect(() => {
+    getAllClaims();
+}, []);
 
-//     getAllClaims();
-// }, []);
+useEffect(() => {
+  if (currentClaimId) {
+    getAllClaims(currentClaimId);
+  }
+}, [currentClaimId]);
+
+useEffect(() => {
+  console.log("Claim ID when Sidebar is rendered:", claimId);
+}, []); // Empty dependency array means this effect runs only once when the component mounts
 
 
-// async function getAllClaims() {
+async function getAllClaims(claimId) {
 
 
-//     try {
-        
-//         const getClaimsRoute = 'http://localhost:4000/new/list'
-
-//         let response = await fetch (getClaimsRoute, {
-//             method: 'GET',
-//             headers: {
-//                 'content-type': 'application/json',
-
-//             },
-//             });
-//             if (response.ok) {
-//                 const data = await response.json();
-//                 setClaimsData(data);
-    
-//                 const firstClaimNumber = data.length > 0 ? data[0].claimNumber : "";
-//                 setCurrentClaimNumber(firstClaimNumber);
-//             } else {
-//                 console.error('Failed to fetch claims data');
-//             }
-//         } catch (error) {
-//             console.error('Error fetching claims:', error);
-//         }
-// }
-
-async function fetchClaimData() {
     try {
-      const response = await fetch('http://localhost:4000/new/list'); // replace with your actual API endpoint
+      const getClaimsRoute = `http://localhost:4000/new/find/${claimId}`;
+  
+      let response = await fetch(getClaimsRoute, {
+        method: 'GET',
+        headers: {
+          'content-type': 'application/json',
+        },
+      });
+  
       if (response.ok) {
         const data = await response.json();
-        return data;
+        setClaimsData(data);
+  
+        // const firstClaimNumber = data.found ? data.found.claimnumber : "";
+        // setCurrentClaimNumber(firstClaimNumber);
+  
+        // const claimId = data.found ? data.found._id : "";
+        // setClaimId(claimId);
       } else {
         console.error('Failed to fetch claims data');
-        return null;
       }
     } catch (error) {
       console.error('Error fetching claims:', error);
-      return null;
     }
-  }
-  
-  // Function to get current claim number by ID
-  function getCurrentClaimNumberById(id, claimsData) {
-    const matchingClaim = claimsData.find(claim => claim._id === id);
-    return matchingClaim ? matchingClaim.claimNumber : "";
-  }
-  
-  function Sidebar() {
-    const [claimsData, setClaimsData] = useState([]);
-    const [currentClaimId, setCurrentClaimId] = useState("");
-    useEffect(() => {
-        // Fetch claim data when the component mounts
-        async function fetchData() {
-          try {
-            const response = await fetch("http://localhost:4000/new/find/:id");
-            if (response.ok) {
-              const data = await response.json();
-              setClaimsData(data);
-    
-              // Set the currentClaimId to the first claim ID if available
-              const firstClaimId = data.length > 0 ? data[0]._id : "";
-              setCurrentClaimId(firstClaimId);
-    
-              // Set the currentClaimNumber to the first claim number if available
-              const firstClaimNumber = data.length > 0 ? data[0].claimnumber : "";
-              setCurrentClaimNumber(firstClaimNumber);
-            } else {
-              console.error("Failed to fetch claims data");
-            }
-          } catch (error) {
-            console.error("Error fetching claims:", error);
-          }
-        }
-    
-        fetchData();
-      }, []);
 }
+
   return (
     <div>
       <nav className="fixed top-0 z-50 w-full bg-slate-800 border-b border-gray-200 dark:bg-gray-800 dark:border-gray-700">
@@ -159,13 +97,10 @@ async function fetchClaimData() {
             </div>
             <div className="flex items-center">
             <div>
-          {found && (
-            <h1 className="text-slate-400">
-              Claim # 
-              {currentClaimNumber}
-            </h1>
-          )}
-        </div>
+        {claimsData.found && (
+          <h1 key={claimsData.found._id} className="text-slate-400">Claim # {claimsData.found.claimnumber}</h1>
+        )}
+      </div>
   
               <div className="flex items-center ms-3">
                 <div>

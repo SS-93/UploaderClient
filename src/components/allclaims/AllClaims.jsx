@@ -1,5 +1,5 @@
 import {React, useState, useEffect} from 'react'
-import { Link } from 'react-router-dom';
+import { Link, useParams } from 'react-router-dom';
 import Sidebar from '../claimprofile/Sidebar';
 import { useClaimContext } from '../claimcontext/ClaimContext';
 
@@ -13,10 +13,17 @@ function AllClaims() {
     const [date, setDate] = useState ('');
     const [claimsData, setClaimsData] = useState([]);
     const [currentClaimNumber, setCurrentClaimNumber] = useState('');
+    const [currentClaimId, setCurrentClaimId] = useState ('');
 
+    const {claimId} = useParams();
+    
     useEffect(() => {
         getAllClaims();
     }, []);
+    
+    useEffect(() => {
+      console.log('Claim ID:', claimId); // Logging the claimId to the console
+    }, [claimId]);
     
 
     async function getAllClaims() {
@@ -49,6 +56,7 @@ function AllClaims() {
     const handleClaimClick = (claim) => {
       setSelectedClaim(claim);
       setCurrentClaimNumber(claim.claimnumber);
+      setCurrentClaimId(claim._id);
     };
 
   return (
@@ -109,7 +117,7 @@ All Claims
             </div>
           ))} */}
 
-{selectedClaim && <Sidebar claimNumber={currentClaimNumber} />}
+{selectedClaim && <Sidebar claimId={currentClaimId} />}
 </div> 
 
   )}
