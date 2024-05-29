@@ -1,15 +1,18 @@
 import React, { useState, useEffect } from "react";
 import AllClaims from "../allclaims/AllClaims";
 import ClaimProfile from "./ClaimProfile";
-import { useParams } from "react-router";
+import { useParams } from "react-router-dom";
 
 function Sidebar(currentClaimId) {
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
-  const [claimsData, setClaimsData] = useState([]);
+  const [claimsData, setClaimsData] = useState(null);
   // const [claimnumber, setClaimNumber] = useState("");
   const [currentClaimNumber, setCurrentClaimNumber] = useState ('');
- let {claimId} = useParams()
+const {claimId} = useParams();
+
+
+
 
   useEffect(() => {
     getAllClaims();
@@ -25,6 +28,32 @@ useEffect(() => {
   console.log("Claim ID when Sidebar is rendered:", claimId);
 }, []); // Empty dependency array means this effect runs only once when the component mounts
 
+useEffect(()=> {
+  if (claimId) {
+    getClaimData (claimId)
+  }
+}, [claimId]);
+
+const getClaimData = async (claimId) => {
+  try {
+    const getClaimsRoute = `http://localhost:4000/new/find/${claimId}`;
+    const response = await fetch(getClaimsRoute, {
+      method: 'GET',
+      headers: {
+        'content-type': 'application/json',
+      },
+    });
+
+    if (response.ok) {
+      const data = await response.json();
+      setClaimsData(data);
+    } else {
+      console.error('Failed to fetch claims data');
+    }
+  } catch (error) {
+    console.error('Error fetching claims:', error);
+  }
+};
 
 async function getAllClaims(claimId) {
 
@@ -84,7 +113,7 @@ async function getAllClaims(claimId) {
                   ></path>
                 </svg>
               </button>
-              <a href="https://flowbite.com" className="flex ms-2 md:me-24">
+              <a href="http://localhost:3000/Allclaims" className="flex ms-2 md:me-24">
                 <img
                   src="https://flowbite.com/docs/images/logo.svg"
                   className="h-8 me-3"
@@ -96,14 +125,16 @@ async function getAllClaims(claimId) {
               </a>
             </div>
             <div className="flex items-center">
-            <div>
+            {/* <div>
         {claimsData.found && (
-          <h1 key={claimsData.found._id} className="text-slate-400">Claim # {claimsData.found.claimnumber}</h1>
+          <h1 key={claimsData.found._id} className="text-grey-200"> Claim # {claimsData.found.claimnumber}</h1>
         )}
-      </div>
+      </div> */}
+      <div> {claimsData && claimsData.found && (
+         <h1 key= {claimsData.found._id} className="text-slate-400"> Claim # {claimsData.found.claimnumber} Name: {claimsData.found.name} </h1>)}  </div>
   
               <div className="flex items-center ms-3">
-                <div>
+                {/* <div>
                   <button
                     type="button"
                     className="flex text-sm bg-gray-800 rounded-full focus:ring-4 focus:ring-gray-300 dark:focus:ring-gray-600"
@@ -117,7 +148,7 @@ async function getAllClaims(claimId) {
                       alt="user photo"
                     />
                   </button>
-                </div>
+                </div> */}
                 <div
                   className="z-50 hidden my-4 text-base list-none bg-white divide-y divide-gray-100 rounded shadow dark:bg-gray-700 dark:divide-gray-600"
                   id="dropdown-user"

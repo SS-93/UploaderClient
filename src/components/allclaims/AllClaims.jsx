@@ -14,6 +14,7 @@ function AllClaims() {
     const [claimsData, setClaimsData] = useState([]);
     const [currentClaimNumber, setCurrentClaimNumber] = useState('');
     const [currentClaimId, setCurrentClaimId] = useState ('');
+    const [loading, setLoading] = useState (null);
 
     const {claimId} = useParams();
     
@@ -58,6 +59,8 @@ function AllClaims() {
       setCurrentClaimNumber(claim.claimnumber);
       setCurrentClaimId(claim._id);
     };
+
+    
 
   return (
     
