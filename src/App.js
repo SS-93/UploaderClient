@@ -8,6 +8,7 @@ import ClaimProfile from './components/claimprofile/ClaimProfile';
 import Sidebar from './components/claimprofile/Sidebar';
 import NewClaim from './components/newclaim/NewClaim';
 import FileInput from './components/fileInput/FileInput';
+import FileInputTest from './components/fileInput/FileInputTest';
 
 
 function App() {
@@ -17,9 +18,10 @@ function App() {
         <Route path='/home' element={<Home />} />
         <Route path='/allclaims' element={<AllClaims />} />
         <Route path='/claims/:claimId' element={<ClaimProfile />} />
-        <Route path='/test' element={<Sidebar />} />
+        <Route path='/test' element={<FileInputTest />} />
         <Route path ='/newclaim' element={ <NewClaim/> }/>
         <Route path='/upload' element = {<FileInput/>} />
+        
       </Routes>
     </BrowserRouter>
  
