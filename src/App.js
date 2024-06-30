@@ -1,4 +1,4 @@
-import logo from './logo.svg';
+// import logo from './logo.svg';
 import './App.css';
 import {BrowserRouter, Routes, Route, Switch } from 'react-router-dom';
 
@@ -14,15 +14,18 @@ import FileInputTest from './components/fileInput/FileInputTest';
 function App() {
   return (
     <BrowserRouter>
+   
     <Routes>
+      
         <Route path='/home' element={<Home />} />
         <Route path='/allclaims' element={<AllClaims />} />
         <Route path='/claims/:claimId' element={<ClaimProfile />} />
-        <Route path='/test' element={<FileInputTest />} />
+        <Route path='/test' className= 'relative' element={<FileInputTest />} />
         <Route path ='/newclaim' element={ <NewClaim/> }/>
         <Route path='/upload' element = {<FileInput/>} />
         
       </Routes>
+      
     </BrowserRouter>
  
 

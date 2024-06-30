@@ -3,6 +3,7 @@ import Sidebar from './Sidebar'
 import DocumentDataTable from '../documentdatatable/DocumentDataTable'
 import { useParams } from 'react-router';
 import AllClaims from '../allclaims/AllClaims';
+import FileInputTest from '../fileInput/FileInputTest';
 
 function ClaimProfile({claimsData, currentClaimNumber}) {
 
@@ -34,7 +35,9 @@ function ClaimProfile({claimsData, currentClaimNumber}) {
     return <div>Loading...</div>;
   }
   return (
+    
     <div>ClaimProfile
+      
         {<Sidebar claimsId = {claim._id} />}
         {< DocumentDataTable claimsData = {claimsData}  className = '' />}
 
