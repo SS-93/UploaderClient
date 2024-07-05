@@ -29,13 +29,20 @@ function ClaimProfile() {
   }
 
   return (
-    <div className="flex">
-      <Sidebar claimId={claim._id} />
-      <div className="flex-1 p-6">
-        <h1 className="text-2xl font-bold mb-4">Claim Profile</h1>
+    <div className="flex h-screen">
+    <Sidebar claimId={claim._id} />
+    <div className="flex-1 p-6 flex flex-col justify-between">
+      <div className="mb-4">
+        <h1 className="text-2xl font-bold">Claim Profile</h1>
+      </div>
+      <div className="flex-1 overflow-auto">
+        {/* Any other content or components for the top half */}
+      </div>
+      <div className="h-1/2">
         <DocumentDataTable claimId={claim._id} />
       </div>
     </div>
+  </div>
   );
 }
 

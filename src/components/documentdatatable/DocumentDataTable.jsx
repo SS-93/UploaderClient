@@ -39,6 +39,7 @@ function DocumentDataTable({ claimId }) {
     const formData = new FormData();
     formData.append('document', file);
     formData.append('fileName', fileName);
+    formData.append('claimId', claimId);
 
     try {
       const res = await fetch(`http://localhost:4000/new/claims/${claimId}/documents`, {
@@ -63,7 +64,7 @@ function DocumentDataTable({ claimId }) {
     <div>
       <section className="bg-slate-900 dark:bg-gray-900 p-3 sm:p-5">
         <div className="mx-auto max-w-screen-lg pl-1 ml-60">
-          <div className="bg-gradient-to-b from-slate-400 via-purple-400 to-slate-400 dark:bg-gray-800 w-full absolute right-0 relative shadow-md sm:rounded-lg overflow-hidden">
+          <div className=" absolute bottom-0 bg-gradient-to-b from-slate-400 via-purple-400 to-slate-400 dark:bg-gray-800 w-full absolute right-0 relative shadow-md sm:rounded-lg overflow-hidden">
             <div className="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
               <div className="w-full md:w-1/2">
                 <form className="flex items-center">
@@ -123,7 +124,7 @@ function DocumentDataTable({ claimId }) {
                       </th>
                       <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
                       <td className="px-4 py-3">Uploaded Document</td>
-                      <td className="px-4 py-3"><a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">{doc.fileUrl}</a></td>
+                      <td className="px-4 py-3"><a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">View</a></td>
                     </tr>
                   ))}
                 </tbody>
