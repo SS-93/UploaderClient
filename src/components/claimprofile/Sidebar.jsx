@@ -1,45 +1,27 @@
 import React, { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import FileInputTest from "../fileInput/FileInputTest";
-import DocumentDataTable from "../documentdatatable/DocumentDataTable";
 
-function Sidebar({ currentClaimId }) {
+function Sidebar({ claimId, onUploadSuccess }) {
   const [claimsData, setClaimsData] = useState(null);
-  const { claimId } = useParams();
+  const params = useParams();
 
   useEffect(() => {
-    getAllClaims();
-  }, []);
+    getClaimData(params.claimId);
+  }, [params.claimId]);
 
-  useEffect(() => {
-    if (currentClaimId) {
-      getAllClaims(currentClaimId);
-    }
-  }, [currentClaimId]);
-
-  useEffect(() => {
-    console.log("Claim ID when Sidebar is rendered:", claimId);
-  }, []);
-
-  useEffect(() => {
-    if (claimId) {
-      getClaimData(claimId);
-    }
-  }, [claimId]);
-
-  const getClaimData = async (claimId) => {
+  const getClaimData = async (id) => {
     try {
-      const getClaimsRoute = `http://localhost:4000/new/find/${claimId}`;
-      const response = await fetch(getClaimsRoute, {
+      const response = await fetch(`http://localhost:4000/new/find/${id}`, {
         method: 'GET',
         headers: {
-          'content-type': 'application/json',
+          'Content-Type': 'application/json',
         },
       });
 
       if (response.ok) {
         const data = await response.json();
-        setClaimsData(data);
+        setClaimsData(data.found);
       } else {
         console.error('Failed to fetch claims data');
       }
@@ -47,28 +29,6 @@ function Sidebar({ currentClaimId }) {
       console.error('Error fetching claims:', error);
     }
   };
-
-  async function getAllClaims(claimId) {
-    try {
-      const getClaimsRoute = `http://localhost:4000/new/find/${claimId}`;
-
-      let response = await fetch(getClaimsRoute, {
-        method: 'GET',
-        headers: {
-          'content-type': 'application/json',
-        },
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setClaimsData(data);
-      } else {
-        console.error('Failed to fetch claims data');
-      }
-    } catch (error) {
-      console.error('Error fetching claims:', error);
-    }
-  }
 
   return (
     <div>
@@ -111,9 +71,9 @@ function Sidebar({ currentClaimId }) {
             </div>
             <div className="flex items-center">
               <div>
-                {claimsData && claimsData.found && (
-                  <h1 key={claimsData.found._id} className="text-slate-400">
-                    Claim # {claimsData.found.claimnumber} Name: {claimsData.found.name}
+                {claimsData && (
+                  <h1 key={claimsData._id} className="text-slate-400">
+                    Claim # {claimsData.claimnumber} Name: {claimsData.name}
                   </h1>
                 )}
               </div>
@@ -199,7 +159,7 @@ function Sidebar({ currentClaimId }) {
                   aria-hidden="true"
                   xmlns="http://www.w3.org/2000/svg"
                   fill="currentColor"
-                  viewBox="0 0 20 18"
+                  viewBox="0 0 20 20"
                 >
                   <path d="M14 2a3.963 3.963 0 0 0-1.4.267 6.439 6.439 0 0 1-1.331 6.638A4 4 0 1 0 14 2Zm1 9h-1.264A6.957 6.957 0 0 1 15 15v2a2.97 2.97 0 0 1-.184 1H19a1 1 0 0 0 1-1v-1a5.006 5.006 0 0 0-5-5ZM6.5 9a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9ZM8 10H5a5.006 5.006 0 0 0-5 5v2a1 1 0 0 0 1 1h11a1 1 0 0 0 1-1v-2a5.006 5.006 0 0 0-5-5Z" />
                 </svg>
@@ -224,7 +184,7 @@ function Sidebar({ currentClaimId }) {
               </a>
             </li>
           </ul>
-          <FileInputTest />
+          {/* <FileInputTest claimId={claimId} onUploadSuccess={onUploadSuccess} /> */}
         </div>
       </aside>
 
@@ -240,9 +200,7 @@ function Sidebar({ currentClaimId }) {
           </div>
           <div className="grid grid-cols-2 gap-4 mb-4"></div>
 
-          <div className="grid grid-cols-2 gap-4">
-            
-          </div>
+          <div className="grid grid-cols-2 gap-4"></div>
         </div>
       </div>
     </div>

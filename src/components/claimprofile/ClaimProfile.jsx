@@ -1,17 +1,10 @@
-import React, {useState, useEffect} from 'react'
-import Sidebar from './Sidebar'
-import DocumentDataTable from '../documentdatatable/DocumentDataTable'
+import React, { useState, useEffect } from 'react';
+import Sidebar from './Sidebar';
+import DocumentDataTable from '../documentdatatable/DocumentDataTable';
 import { useParams } from 'react-router';
-import AllClaims from '../allclaims/AllClaims';
-import FileInputTest from '../fileInput/FileInputTest';
 
-function ClaimProfile({claimsData, currentClaimNumber}) {
-
-    // const [claimnumber, setClaimNumber] = useState('');
-    // const [name, setName] = useState ('');
-    // const [date, setDate] = useState ('');
-    // const [claimsData, setClaimsData] = useState ([]);
-    const { claimId } = useParams();
+function ClaimProfile() {
+  const { claimId } = useParams();
   const [claim, setClaim] = useState(null);
 
   useEffect(() => {
@@ -34,16 +27,69 @@ function ClaimProfile({claimsData, currentClaimNumber}) {
   if (!claim) {
     return <div>Loading...</div>;
   }
-  return (
-    
-    <div>ClaimProfile
-      
-        {<Sidebar claimsId = {claim._id} />}
-        {< DocumentDataTable claimsData = {claimsData}  className = '' />}
 
+  return (
+    <div className="flex">
+      <Sidebar claimId={claim._id} />
+      <div className="flex-1 p-6">
+        <h1 className="text-2xl font-bold mb-4">Claim Profile</h1>
+        <DocumentDataTable claimId={claim._id} />
+      </div>
     </div>
   );
-  }
+}
+
+export default ClaimProfile;
 
 
-export default ClaimProfile
+// 
+
+
+// import Sidebar from './Sidebar'
+// import DocumentDataTable from '../documentdatatable/DocumentDataTable'
+// import { useParams } from 'react-router';
+// import AllClaims from '../allclaims/AllClaims';
+// import FileInputTest from '../fileInput/FileInputTest';
+
+// function ClaimProfile({claimsData, currentClaimNumber}) {
+
+//     // const [claimnumber, setClaimNumber] = useState('');
+//     // const [name, setName] = useState ('');
+//     // const [date, setDate] = useState ('');
+//     // const [claimsData, setClaimsData] = useState ([]);
+//     const { claimId } = useParams();
+//   const [claim, setClaim] = useState(null);
+
+//   useEffect(() => {
+//     const fetchClaim = async () => {
+//       try {
+//         const response = await fetch(`http://localhost:4000/new/find/${claimId}`);
+//         if (!response.ok) {
+//           throw new Error(`HTTP error! Status: ${response.status}`);
+//         }
+//         const data = await response.json();
+//         setClaim(data.found);
+//       } catch (error) {
+//         console.error(`Error fetching claim details:`, error);
+//       }
+//     };
+
+//     fetchClaim();
+//   }, [claimId]);
+
+//   if (!claim) {
+//     return <div>Loading...</div>;
+//   }
+//   return (
+    
+//     <div>ClaimProfile
+      
+//         {<Sidebar claimsId = {claim._id} />}
+//         {< DocumentDataTable claimsData = {claimsData}  className = '' />}
+
+//     </div>
+//   );
+//   }
+
+
+// export default ClaimProfile

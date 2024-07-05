@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const UploadComponent = () => {
+const FileInputTest = () => {
     const [file, setFile] = useState(null);
     const [imageUrl, setImageUrl] = useState('');
 
@@ -14,7 +14,7 @@ const UploadComponent = () => {
         formData.append('image', file);
 
         try {
-            const res = await fetch('http://localhost:4000/dms/images', {
+            const res = await fetch('http://localhost:4000/dms/upload', {
                 method: 'POST',
                 body: formData,
             });
@@ -27,7 +27,7 @@ const UploadComponent = () => {
     };
 
     return (
-        <div className="fixed bottom-4 left-4 bg-slate-600 p-4 rounded-lg shadow-lg">
+        <div className="fixed bottom-4 right-4 bg-slate-600 p-4 rounded-lg shadow-lg">
             <form onSubmit={onSubmit} className="space-y-2">
                 <input
                     type="file"
@@ -44,7 +44,7 @@ const UploadComponent = () => {
             </form>
             {imageUrl && (
                 <div className="mt-4">
-                    <h3 className="text-sm font-medium">Uploaded Image:</h3>
+                    <h3 className="text-sm font-medium"> Uploaded Image: </h3>
                     <img src={imageUrl} alt="Uploaded file" className="mt-2 max-w-xs" />
                 </div>
             )}
@@ -52,7 +52,7 @@ const UploadComponent = () => {
     );
 };
 
-export default UploadComponent;
+export default FileInputTest;
 
 // import React, { useState } from 'react';
 
