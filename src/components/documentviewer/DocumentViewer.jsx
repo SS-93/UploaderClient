@@ -1,5 +1,5 @@
 import React, {useState, useEffect} from 'react'
-import DocViewer, { DocViewerRenderers} from 'react-doc-viewer'
+import DocViewer, { DocViewerRenderers} from "@cyntler/react-doc-viewer"
 
 function DocumentViewer({ documentUrl, onClose}) {
     const [loading, setLoading] = useState(true);

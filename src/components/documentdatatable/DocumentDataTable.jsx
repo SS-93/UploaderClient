@@ -91,22 +91,19 @@ function DocumentDataTable({ claimId, onViewDocument }) {
   //     console.error('Error fetching signed URL:', err);
   //   }
   // };
-
+//? II
   const handleViewDocument = async (fileKey) => {
     try {
-      console.log(`Fetching document for fileKey: ${fileKey}`); // Log the file key
+        console.log(`Fetching document for fileKey: ${fileKey}`); // Log the file key
 
-      const res = await fetch(`http://localhost:4000/new/documents/${fileKey}/signed-url`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch document');
-      }
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      onViewDocument(url); // Pass the blob URL to the viewer
+        // Construct the correct URL
+        const url = `${fileKey}`;
+
+        onViewDocument(url); // Pass the object URL to the viewer
     } catch (err) {
-      console.error('Error fetching document:', err);
+        console.error('Error fetching document:', err);
     }
-  };
+};
 
   // const handleDownloadDocument = async (fileKey) => {
   //   try {
