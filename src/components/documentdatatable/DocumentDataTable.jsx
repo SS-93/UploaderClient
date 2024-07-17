@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 
-function DocumentDataTable({ claimId }) {
+function DocumentDataTable({ claimId, onViewDocument }) {
   const [documents, setDocuments] = useState([]);
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [isFileSelected, setIsFileSelected] = useState(false);
+
 
   useEffect(() => {
     fetchDocuments();
@@ -60,6 +61,114 @@ function DocumentDataTable({ claimId }) {
     }
   };
 
+
+  // const handleViewDocument = async (fileKey) => {
+  //   try {
+  //     const res = await fetch(`http://localhost:4000/new/documents/${fileKey}/`);
+  //     if (!res.ok) {
+  //       throw new Error('Failed to fetch signed URL');
+  //     }
+  //     const data = await res.json();
+  //     onViewDocument(data.url); // Use the signed URL to view the document
+  //   } catch (err) {
+  //     console.error('Error fetching signed URL:', err);
+  //   }
+  // };
+
+  // const handleViewDocument = async (fileKey) => {
+  //   try {
+  //     console.log(`Fetching signed URL for fileKey: ${fileKey}`); // Log the file key
+  
+  //     const res = await fetch(`http://localhost:4000/new/documents/${fileKey}/signed-url`);
+  //     if (!res.ok) {
+  //       throw new Error('Failed to fetch signed URL');
+  //     }
+  //     const data = await res.json();
+  //     console.log(`Signed URL: ${data.url}`); // Log the signed URL
+  
+  //     onViewDocument(data.url); // Use the signed URL to view the document
+  //   } catch (err) {
+  //     console.error('Error fetching signed URL:', err);
+  //   }
+  // };
+
+  const handleViewDocument = async (fileKey) => {
+    try {
+      console.log(`Fetching document for fileKey: ${fileKey}`); // Log the file key
+
+      const res = await fetch(`http://localhost:4000/new/documents/${fileKey}/signed-url`);
+      if (!res.ok) {
+        throw new Error('Failed to fetch document');
+      }
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      onViewDocument(url); // Pass the blob URL to the viewer
+    } catch (err) {
+      console.error('Error fetching document:', err);
+    }
+  };
+
+  // const handleDownloadDocument = async (fileKey) => {
+  //   try {
+  //     console.log(`Fetching document for fileKey: ${fileKey}`); // Log the file key
+  
+  //     const res = await fetch(`https://iluploadmetest.s3.us-east-2.amazonaws.com/${fileKey}/`);
+  //     if (!res.ok) {
+  //       throw new Error('Failed to fetch document');
+  //     }
+
+  //     const data = await res.json 
+
+  //     const documentResponse = await fetch(data.url);
+  //     if (!documentResponse.ok) {
+  //       throw new Error('Failed to fetch document');
+  //     }
+
+
+    
+  //     const url = res.url;
+
+      
+  //     const a = document.createElement('a');
+      
+  //     a.href = url 
+  //     a.href = url;
+  //     a.download = fileKey; // You can set a more descriptive file name if needed
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     a.remove();
+  //     console.log(`File downloaded and URL created: ${url}`);
+  //   } catch (err) {
+  //     console.error('Error fetching document:', err);
+  //   }
+  // };
+const handleDownloadDocument = async (fileKey) => {
+  try {
+    console.log(`Fetching document for fileKey: ${fileKey}`); // Log the file key
+
+    // Construct the correct URL
+    const url = `${fileKey}`;
+
+    // Fetch the document
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error('Failed to fetch document');
+    }
+
+    // Create a link element and trigger a download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileKey; // You can set a more descriptive file name if needed
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    console.log(`File downloaded from URL: ${url}`);
+  } catch (err) {
+    console.error('Error fetching document:', err);
+  }
+};
+
+
   return (
     <div>
       <section className="bg-slate-900 dark:bg-gray-900 p-3 sm:p-5">
@@ -113,7 +222,7 @@ function DocumentDataTable({ claimId }) {
                     <th scope="col" className="px-4 py-3">Document Name</th>
                     <th scope="col" className="px-4 py-3">Uploaded Date</th>
                     <th scope="col" className="px-4 py-3">Uploader</th>
-                    <th scope="col" className="px-4 py-3">Image URL</th>
+                    <th scope="col" className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -124,7 +233,9 @@ function DocumentDataTable({ claimId }) {
                       </th>
                       <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
                       <td className="px-4 py-3">Uploaded Document</td>
-                      <td className="px-4 py-3"><a href={doc.fileUrl} target="_blank" rel="noopener noreferrer">View</a></td>
+                      <td className="px-4 py-3"><a href="#" onClick={() => handleViewDocument(doc.fileUrl)}>View</a></td>
+                      <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
+
                     </tr>
                   ))}
                 </tbody>

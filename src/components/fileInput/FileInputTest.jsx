@@ -26,6 +26,7 @@ const FileInputTest = () => {
         }
     };
 
+
     return (
         <div className="fixed bottom-4 right-4 bg-slate-600 p-4 rounded-lg shadow-lg">
             <form onSubmit={onSubmit} className="space-y-2">

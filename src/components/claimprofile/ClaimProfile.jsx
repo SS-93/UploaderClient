@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './Sidebar';
 import DocumentDataTable from '../documentdatatable/DocumentDataTable';
+import DocumentViewer from '../documentviewer/DocumentViewer';
 import { useParams } from 'react-router';
 
 function ClaimProfile() {
   const { claimId } = useParams();
   const [claim, setClaim] = useState(null);
+  const [ selectedDocumentUrl, setSelectedDocumentUrl] = useState('')
 
   useEffect(() => {
     const fetchClaim = async () => {
@@ -24,6 +26,11 @@ function ClaimProfile() {
     fetchClaim();
   }, [claimId]);
 
+
+  const handleCloseDocumentViewer = () => {
+    setSelectedDocumentUrl('');
+  };
+
   if (!claim) {
     return <div>Loading...</div>;
   }
@@ -39,8 +46,12 @@ function ClaimProfile() {
         {/* Any other content or components for the top half */}
       </div>
       <div className="h-1/2">
-        <DocumentDataTable claimId={claim._id} />
+          <DocumentViewer documentUrl={selectedDocumentUrl} onClose= {handleCloseDocumentViewer} />
+        </div>
+      <div className="h-1/2">
+      <DocumentDataTable claimId={claim._id} onViewDocument={setSelectedDocumentUrl} />
       </div>
+      
     </div>
   </div>
   );
