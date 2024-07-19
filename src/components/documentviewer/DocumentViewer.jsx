@@ -65,6 +65,7 @@ useEffect(() => {
         {!loading && !error && documentUrl ? (
           <DocViewer
             documents={[{ uri: documentUrl }]}
+            // documents={[{ uri: "https://iluploadmetest.s3.us-east-2.amazonaws.com/ETSY+lOgo.png"}]}
             pluginRenderers={DocViewerRenderers}
           />
         ) : (
