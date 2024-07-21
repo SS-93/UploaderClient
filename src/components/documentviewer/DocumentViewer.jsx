@@ -44,40 +44,34 @@ useEffect(() => {
   return (
     <div>
         
-        <div className="p-4 sm:ml-64">
-    <div className="p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14"> 
-      {/* <div className="grid grid-cols-3 gap-4 mb-4"></div>
-
-      DOCUMENT VIEWER 
-      <div className="flex items-center justify-center h-48 mb-4 rounded bg-gray-50 dark:bg-gray-800">
-        <p className="text-2xl text-slate-400 dark:text-gray-500">
-          DOCUMENT VIEWER
-        </p>
+     <div className="pl-5 ml-4 mr-4">
+      <div className=" ml-60 p-4 border-2 border-gray-200 border-dashed rounded-lg dark:border-gray-700 mt-14">
+        <div className="relative bg-white p-6 rounded-lg shadow-lg dark:bg-gray-700 flex justify-center items-center">
+          <button
+            onClick={onClose}
+            className="absolute top-2 right-2 text-gray-400 hover:text-gray-600 dark:text-gray-300 dark:hover:text-white"
+          >
+            X
+          </button>
+          {loading && <p>Loading document...</p>}
+          {error && <p>Error loading document: {error}</p>}
+          {!loading && !error && documentUrl ? (
+            <div className='max-h-[500px]w-full overflow-y-auto'>
+            <DocViewer
+              documents={[{ uri: documentUrl }]}
+              pluginRenderers={DocViewerRenderers}
+              className="w-full h-auto "
+            />
+            </div>
+          ) : (
+            !loading && !error && <p>No document selected</p>
+          )}
+        </div>
       </div>
-      <div className="grid grid-cols-2 gap-4 mb-4"></div> */}
-
-<div className="bg-white p-6 rounded-lg shadow-lg relative flex items-center justify-center h-48 mb-4 rounded bg-gray-50 dark:bg-gray-800">
-        <button onClick={onClose} className="absolute top-2 right-2 text-gray-600 hover:text-gray-800">
-          Close
-        </button>
-        {loading && <p>Loading document...</p>}
-        {error && <p>Error loading document: {error}</p>}
-        {!loading && !error && documentUrl ? (
-          <DocViewer
-            documents={[{ uri: documentUrl }]}
-            // documents={[{ uri: "https://iluploadmetest.s3.us-east-2.amazonaws.com/ETSY+lOgo.png"}]}
-            pluginRenderers={DocViewerRenderers}
-          />
-        ) : (
-          !loading && !error && <p>No document selected</p>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4"></div>
-    </div>  
+    </div>
   </div>
 
- </div> 
+
   )
 }
 

@@ -168,11 +168,11 @@ const handleDownloadDocument = async (fileKey) => {
 
   return (
     <div>
-      <section className="bg-slate-900 dark:bg-gray-900 p-3 sm:p-5">
-        <div className="mx-auto max-w-screen-lg pl-1 ml-60">
-          <div className=" absolute bottom-0 bg-gradient-to-b from-slate-400 via-purple-400 to-slate-400 dark:bg-gray-800 w-full absolute right-0 relative shadow-md sm:rounded-lg overflow-hidden">
-            <div className="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
-              <div className="w-full md:w-1/2">
+    <section className="ml-60 bg-slate-900 dark:bg-gray-900 p-4 ">
+        <div className=" ml-2 p-2  ">
+          <div className="bg-gradient-to-b from-slate-400 via-purple-400 to-slate-400 dark:bg-gray-800 w-full shadow-md sm:rounded-lg overflow-hidden">
+            <div className=" space-y-3 md:space-y-0 md:space-x-4 p-4">
+              <div className="md:w-1/2">
                 <form className="flex items-center">
                   <label htmlFor="simple-search" className="sr-only">Search</label>
                   <div className="relative w-full">
@@ -213,8 +213,8 @@ const handleDownloadDocument = async (fileKey) => {
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+              <table className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 w-full">
                   <tr>
                     <th scope="col" className="px-4 py-3">Document Name</th>
                     <th scope="col" className="px-4 py-3">Uploaded Date</th>
@@ -232,7 +232,7 @@ const handleDownloadDocument = async (fileKey) => {
                       <td className="px-4 py-3">Uploaded Document</td>
                       <td className="px-4 py-3"><a href="#" onClick={() => handleViewDocument(doc.fileUrl)}>View</a></td>
                       <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
-
+                      {/* <td className="px-4 py-3"><a href="#" >Read</a></td> */}
                     </tr>
                   ))}
                 </tbody>
@@ -241,7 +241,7 @@ const handleDownloadDocument = async (fileKey) => {
           </div>
         </div>
       </section>
-    </div>
+  </div>
   );
 }
 

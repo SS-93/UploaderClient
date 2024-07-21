@@ -12,6 +12,7 @@ import FileInputTest from './components/fileInput/FileInputTest';
 import DocumentViewer from './components/documentviewer/DocumentViewer';
 import DocumentDataTable from './components/documentdatatable/DocumentDataTable';
 import DownloadFileTest from './components/fileInput/DownloadFileTest';
+import TextModule from './components/textmodule/TextModule';
 
 
 function App() {
@@ -23,7 +24,7 @@ function App() {
         <Route path='/home' element={<Home />} />
         <Route path='/allclaims' element={<AllClaims />} />
         <Route path='/claims/:claimId' element={<ClaimProfile />} />
-        <Route path='/test' className= 'relative' element={<DownloadFileTest /> } />
+        <Route path='/test' className= '' element={<TextModule /> } />
         <Route path ='/newclaim' element={ <NewClaim/> }/>
         <Route path='/upload' element = {<FileInput/>} />
         
