@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 
-function DocumentDataTable({ claimId, onViewDocument }) {
+function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
   const [documents, setDocuments] = useState([]);
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
@@ -105,6 +105,21 @@ function DocumentDataTable({ claimId, onViewDocument }) {
     }
 };
 
+// Initiate OCR Processing 
+
+const handleReadDocument = async (fileKey) => {
+  try {
+    const res = await fetch(`${fileKey}`);
+    if (!res.ok) {
+      throw new Error('Failed to fetch OCR text');
+    }
+    const data = await res.json();
+    onReadDocument(data.text);
+  } catch (err) {
+    console.error('Error reading document:', err);
+  }
+};
+
   // const handleDownloadDocument = async (fileKey) => {
   //   try {
   //     console.log(`Fetching document for fileKey: ${fileKey}`); // Log the file key
@@ -164,6 +179,8 @@ const handleDownloadDocument = async (fileKey) => {
     console.error('Error fetching document:', err);
   }
 };
+
+
 
 
   return (
@@ -232,7 +249,7 @@ const handleDownloadDocument = async (fileKey) => {
                       <td className="px-4 py-3">Uploaded Document</td>
                       <td className="px-4 py-3"><a href="#" onClick={() => handleViewDocument(doc.fileUrl)}>View</a></td>
                       <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
-                      {/* <td className="px-4 py-3"><a href="#" >Read</a></td> */}
+                      <td className="px-4 py-3"><a href="#" onClick={()=> handleReadDocument(doc._id)} >Read</a></td>
                     </tr>
                   ))}
                 </tbody>

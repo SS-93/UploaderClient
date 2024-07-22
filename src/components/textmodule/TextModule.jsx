@@ -13,7 +13,7 @@
 
 import React, { useState } from 'react';
 
-function TextModule  ({ ocrText }) {
+function TextModule  ({ Text }) {
 //   const [isOpen, setIsOpen] = useState(true);
 
 //   const toggleModal = () => {
@@ -71,7 +71,7 @@ function TextModule  ({ ocrText }) {
               {/* Modal body */}
               <div className="p-4 md:p-5 space-y-4">
                 <div id="ocr-output" className="text-base leading-relaxed text-gray-500 dark:text-gray-400">
-                  {ocrText || 'No OCR text available'}
+                  {Text || 'No OCR text available'}
                 </div>
               </div>
               {/* Modal footer */}

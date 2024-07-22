@@ -9,6 +9,8 @@ function ClaimProfile() {
   const { claimId } = useParams();
   const [claim, setClaim] = useState(null);
   const [selectedDocumentUrl, setSelectedDocumentUrl] = useState("");
+  const [ocrText, setOcrText] = useState("");
+
 
   useEffect(() => {
     const fetchClaim = async () => {
@@ -37,6 +39,15 @@ function ClaimProfile() {
     return <div>Loading...</div>;
   }
 
+  const handleReadDocument =(text) => {
+    setOcrText(text);
+
+  }
+
+  if (!claim) {
+    return <div>Loading...</div>
+  }
+
   return (
     <div className="">
       <Sidebar claimId={claim._id} />
@@ -54,12 +65,13 @@ function ClaimProfile() {
           />
         </div>
         <div className=" ">
-          <TextModule />
+          <TextModule text={ocrText} />
         </div>
         <div className="">
           <DocumentDataTable
             claimId={claim._id}
             onViewDocument={setSelectedDocumentUrl}
+            onReadDocument={handleReadDocument}
           />
         </div>
       </div>
