@@ -5,6 +5,7 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [isFileSelected, setIsFileSelected] = useState(false);
+  
 
 
   useEffect(() => {
@@ -107,18 +108,43 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
 
 // Initiate OCR Processing 
 
-const handleReadDocument = async (fileKey) => {
+const handleReadDocument = async (documentId) => {
   try {
-    const res = await fetch(`${fileKey}`);
-    if (!res.ok) {
-      throw new Error('Failed to fetch OCR text');
-    }
-    const data = await res.json();
-    onReadDocument(data.text);
+      const res = await fetch(`http://localhost:4000/new/claims/${claimId}/documents/${documentId}`);
+      if (!res.ok) {
+          throw new Error('Failed to fetch document details');
+      }
+      const document = await res.json();
+
+      // Send the document to the OCR route
+      const ocrRes = await fetch(`http://localhost:4000/new/ocr/read/${documentId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fileUrl: document.fileUrl, mimetype: document.mimetype })
+      });
+      if (!ocrRes.ok) {
+          throw new Error('Failed to fetch OCR text');
+      }
+      const data = await ocrRes.json();
+      onReadDocument(data.text);
   } catch (err) {
-    console.error('Error reading document:', err);
+      console.error('Error reading document:', err);
   }
 };
+
+
+// const handleReadDocument = async (fileKey) => {
+//   try {
+//     const res = await fetch(`${fileKey}`);
+//     if (!res.ok) {
+//       throw new Error('Failed to fetch OCR text');
+//     }
+//     const data = await res.json();
+//     onReadDocument(data.text);
+//   } catch (err) {
+//     console.error('Error reading document:', err);
+//   }
+// };
 
   // const handleDownloadDocument = async (fileKey) => {
   //   try {

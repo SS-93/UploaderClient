@@ -65,7 +65,8 @@ function ClaimProfile() {
           />
         </div>
         <div className=" ">
-          <TextModule text={ocrText} />
+          <TextModule text={ocrText} 
+          documentUrl = {selectedDocumentUrl} />
         </div>
         <div className="">
           <DocumentDataTable
