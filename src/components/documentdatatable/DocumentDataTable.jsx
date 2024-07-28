@@ -260,9 +260,11 @@ const handleDownloadDocument = async (fileKey) => {
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 w-full">
                   <tr>
                     <th scope="col" className="px-4 py-3">Document Name</th>
-                    <th scope="col" className="px-4 py-3">Uploaded Date</th>
+                    <th scope="col" className="px-4 py-3">Date Uploaded</th>
                     <th scope="col" className="px-4 py-3">Uploader</th>
-                    <th scope="col" className="px-4 py-3">Actions</th>
+                    <th scope="col" className="px-4 py-3">View File</th>
+                    <th scope="col" className="px-4 py-3">Save File</th>
+                    <th scope="col" className="px-4 py-3">Categories</th>
                   </tr>
                 </thead>
                 <tbody>
