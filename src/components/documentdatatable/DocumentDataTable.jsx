@@ -1,12 +1,20 @@
 import React, { useState, useEffect } from 'react';
 
-function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
+function DocumentDataTable({ claimId, onViewDocument, onReadDocument, }) {
   const [documents, setDocuments] = useState([]);
   const [file, setFile] = useState(null);
   const [fileName, setFileName] = useState('');
   const [isFileSelected, setIsFileSelected] = useState(false);
-  
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [category, setCategory] = useState('')
 
+  
+// correspondene general
+// first notice of loss
+// Invoice
+// Legal
+// Medicals 
+//* Wages
 
   useEffect(() => {
     fetchDocuments();
@@ -25,6 +33,9 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
     }
   };
 
+  const filteredDocuments = documents.filter(doc => categoryFilter === '' || doc.category === categoryFilter);
+
+
   const onFileChange = (e) => {
     const selectedFile = e.target.files[0];
     setFile(selectedFile);
@@ -41,6 +52,7 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
     const formData = new FormData();
     formData.append('document', file);
     formData.append('fileName', fileName);
+    formData.append('category', category)
     formData.append('claimId', claimId);
 
     try {
@@ -54,6 +66,7 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
         setIsFileSelected(false); // Reset file selection
         setFile(null);
         setFileName(''); // Reset file name input
+        setCategory('')
       } else {
         console.error('Upload failed');
       }
@@ -180,32 +193,53 @@ const handleReadDocument = async (documentId) => {
   //     console.error('Error fetching document:', err);
   //   }
   // };
-const handleDownloadDocument = async (fileKey) => {
+//! const handleDownloadDocument = async (fileKey) => {
+//   try {
+//     console.log(`Fetching document for fileKey: ${fileKey}`); // Log the file key
+
+//     // Construct the correct URL
+//     const url = `${fileKey}`;
+
+//     // Fetch the document
+//     const res = await fetch(url);
+//     if (!res.ok) {
+//       throw new Error('Failed to fetch document');
+//     }
+
+//     // Create a link element and trigger a download
+//     const a = document.createElement('a');
+//     a.href = url;
+//     a.download = fileKey; // You can set a more descriptive file name if needed
+//     document.body.appendChild(a);
+//     a.click();
+//     a.remove();
+//     console.log(`File downloaded from URL: ${url}`);
+//   } catch (err) {
+//     console.error('Error fetching document:', err);
+//   }
+// };
+
+const handleDownloadDocument = (fileUrl) => {
   try {
-    console.log(`Fetching document for fileKey: ${fileKey}`); // Log the file key
+    console.log(`Initiating download for file: ${fileUrl}`);
 
-    // Construct the correct URL
-    const url = `${fileKey}`;
-
-    // Fetch the document
-    const res = await fetch(url);
-    if (!res.ok) {
-      throw new Error('Failed to fetch document');
-    }
-
-    // Create a link element and trigger a download
+    // Create a link element
     const a = document.createElement('a');
-    a.href = url;
-    a.download = fileKey; // You can set a more descriptive file name if needed
+    a.href = fileUrl;
+    a.download = ''; // This attribute will prompt the browser to download the file
     document.body.appendChild(a);
     a.click();
-    a.remove();
-    console.log(`File downloaded from URL: ${url}`);
+    document.body.removeChild(a);
+
+    console.log(`File download triggered for URL: ${fileUrl}`);
   } catch (err) {
-    console.error('Error fetching document:', err);
+    console.error('Error initiating download:', err);
   }
 };
 
+
+
+const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
 
 
 
@@ -247,6 +281,17 @@ const handleDownloadDocument = async (fileKey) => {
                         className="px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-200"
                         required
                       />
+                      <select
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="bg-gray-50 border border-gray-300 text-slate-600 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-3 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                        required
+                      >
+                        <option value="">Select Category</option>
+                        {categories.map((cat, index) => (
+                          <option key={index} value={cat}>{cat}</option>
+                        ))}
+                      </select>
                       <button type="submit" className="flex items-center justify-center text-white bg-blue-600 hover:bg-blue-300 focus:ring-4 focus:ring-purple-200 font-medium rounded-lg text-sm px-4 py-2">
                         Upload
                       </button>
@@ -264,7 +309,20 @@ const handleDownloadDocument = async (fileKey) => {
                     <th scope="col" className="px-4 py-3">Uploader</th>
                     <th scope="col" className="px-4 py-3">View File</th>
                     <th scope="col" className="px-4 py-3">Save File</th>
-                    <th scope="col" className="px-4 py-3">Categories</th>
+                    <th scope="col" className="px-4 py-3">Category</th>
+                    {/* <th scope="col" className="px-4 py-3">
+                      <select
+                        id="category-header"
+                        value={categoryFilter}
+                        onChange={(e) => setCategoryFilter(e.target.value)}
+                        className="bg-gray-50 border border-gray-300 text-slate-600 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-3 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                      >
+                        <option value="">All Categories</option>
+                        {categories.map((category, index) => (
+                          <option key={index} value={category}>{category}</option>
+                        ))}
+                      </select> */}
+                    {/* </th> */}
                   </tr>
                 </thead>
                 <tbody>
@@ -277,7 +335,8 @@ const handleDownloadDocument = async (fileKey) => {
                       <td className="px-4 py-3">Uploaded Document</td>
                       <td className="px-4 py-3"><a href="#" onClick={() => handleViewDocument(doc.fileUrl)}>View</a></td>
                       <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
-                      <td className="px-4 py-3"><a href="#" onClick={()=> handleReadDocument(doc._id)} >Read</a></td>
+                      {/* <td className="px-4 py-3"><a href="#" onClick={()=> handleReadDocument(doc._id)} >Read</a></td> */}
+                      <td className="px-4 py-3">{doc.category}</td>
                     </tr>
                   ))}
                 </tbody>
