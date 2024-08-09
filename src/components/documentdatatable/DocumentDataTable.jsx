@@ -3,10 +3,13 @@ import React, { useState, useEffect } from 'react';
 function DocumentDataTable({ claimId, onViewDocument, onReadDocument, }) {
   const [documents, setDocuments] = useState([]);
   const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
   const [fileName, setFileName] = useState('');
   const [isFileSelected, setIsFileSelected] = useState(false);
-  const [categoryFilter, setCategoryFilter] = useState('')
-  const [category, setCategory] = useState('')
+  const [categoryFilter, setCategoryFilter] = useState('');
+  const [category, setCategory] = useState('');
+  const [showBulkUpload, setShowBulkUpload] = useState ('');
+  const [fileNames, setFileNames] = useState({});
 
   
 // correspondene general
@@ -35,6 +38,7 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument, }) {
 
   const filteredDocuments = documents.filter(doc => categoryFilter === '' || doc.category === categoryFilter);
 
+  
 
   const onFileChange = (e) => {
     const selectedFile = e.target.files[0];
@@ -74,6 +78,63 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument, }) {
       console.error(err);
     }
   };
+
+  const onBulkFileChange = (e) => {
+    const selectedFiles = Array.from(e.target.files);
+    setFiles(selectedFiles);
+  
+    const initialFileNames = {};
+    selectedFiles.forEach(file => {
+      initialFileNames[file.name] = file.name; // Initialize with original filenames
+    });
+    setFileNames(initialFileNames);
+  };
+
+  const onBulkUploadSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+  
+    files.forEach(file => {
+      formData.append('documents', file, fileNames[file.name]); // Use the edited filename
+    });
+    formData.append('category', category);
+    formData.append('claimId', claimId);
+  
+    try {
+      const res = await fetch(`http://localhost:4000/dms/bulk-upload`, {
+        method: 'POST',
+        body: formData,
+      });
+  
+      if (res.ok) {
+        const result = await res.json();
+  
+        // Update the documents state with the new files
+        setDocuments(prevDocuments => [
+          ...prevDocuments,
+          ...result.files.map(file => ({
+            _id: file._id,
+            fileName: file.filename,
+            originalName: file.originalName,
+            fileUrl: file.fileUrl,
+            mimetype: file.mimetype,
+            uploadDate: new Date(file.uploadDate),
+            category: category,
+          }))
+        ]);
+  
+        setFiles([]); // Reset file selection
+        setFileNames({}); // Reset filenames
+        setCategory('');
+        setShowBulkUpload(false); // Hide bulk upload form after submission
+      } else {
+        console.error('Bulk upload failed');
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  };
+  
 
 
   // const handleViewDocument = async (fileKey) => {
@@ -298,8 +359,63 @@ const categories = ["Correspondence General", "First Notice of Loss", "Invoice",
                     </>
                   )}
                 </form>
+                 {/* Bulk Upload Button */}
+                 <button
+                  className="flex items-center justify-center text-white bg-green-600 hover:bg-green-300 focus:ring-4 focus:ring-green-200 font-medium rounded-lg text-sm px-4 py-2"
+                  onClick={() => setShowBulkUpload(!showBulkUpload)}
+                >
+                  + Bulk Upload
+                </button>
               </div>
             </div>
+
+            {/* Bulk Upload Form */}
+            {showBulkUpload && (
+              <div className="p-4 bg-gray-100 dark:bg-gray-700 rounded-lg mt-4">
+                <form onSubmit={onBulkUploadSubmit}>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={onBulkFileChange}
+                    required
+                    className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 dark:bg-gray-700 dark:border-gray-600 focus:outline-none"
+                  />
+                   {/* Render filename input fields for each file */}
+                   {files.map(file => (
+                    <div key={file.name} className="flex items-center space-x-3 mt-2">
+                      <input
+                        type="text"
+                        value={fileNames[file.name] || ''}
+                        onChange={(e) => setFileNames({
+                          ...fileNames,
+                          [file.name]: e.target.value
+                        })}
+                        placeholder="Edit file name"
+                        className="px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        required
+                      />
+                    </div>
+                  ))}
+                  <select
+                    value={category}
+                    onChange={(e) => setCategory(e.target.value)}
+                    className="mt-2 bg-gray-50 border border-gray-300 text-slate-600 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-3 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                    required
+                  >
+                    <option value="">Select Category</option>
+                    {categories.map((cat, index) => (
+                      <option key={index} value={cat}>{cat}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="submit"
+                    className="mt-2 w-full text-white bg-green-600 hover:bg-green-300 focus:ring-4 focus:ring-green-200 font-medium rounded-lg text-sm px-4 py-2"
+                  >
+                    Upload Files
+                  </button>
+                </form>
+              </div>
+            )}
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400">
                 <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 w-full">
