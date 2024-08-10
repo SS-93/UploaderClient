@@ -10,6 +10,12 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument, }) {
   const [category, setCategory] = useState('');
   const [showBulkUpload, setShowBulkUpload] = useState ('');
   const [fileNames, setFileNames] = useState({});
+  const [isEditing, setIsEditing] = useState(false);
+  const [isEditingMultiple, setIsEditingMultiple] = useState (false);
+  const [editedDocuments, setEditedDocuments] = useState ({});
+ 
+  
+
 
   
 // correspondene general
@@ -297,6 +303,76 @@ const handleDownloadDocument = (fileUrl) => {
     console.error('Error initiating download:', err);
   }
 };
+const handleEditClick = () => {
+  setIsEditing(!isEditing);
+  if (!isEditing) {
+    // Clone the current documents' state when entering edit mode
+    const clonedDocuments = documents.reduce((acc, doc) => {
+      acc[doc._id] = { fileName: doc.fileName, category: doc.category };
+      return acc;
+    }, {});
+    setEditedDocuments(clonedDocuments);
+  }
+};
+
+const handleEditMultipleClick = () => {
+  setIsEditingMultiple(!isEditingMultiple);
+  if (!isEditingMultiple) {
+    const clonedDocuments = documents.reduce((acc, doc) => {
+      acc[doc._id] = { fileName: doc.fileName, category: doc.category };
+      return acc;
+    }, {});
+    setEditedDocuments(clonedDocuments);
+  }
+};
+
+
+
+
+const handleInputChange = (id, field, value) => {
+  setEditedDocuments({
+    ...editedDocuments,
+    [id]: { ...editedDocuments[id], [field]: value },
+  });
+};
+
+const handleSave = async () => {
+  try {
+      // Iterate over the edited documents and send update requests
+      for (const [id, updatedData] of Object.entries(editedDocuments)) {
+          await fetch(`http://localhost:4000/new/claims/${claimId}/documents/${id}`, {
+              method: 'PUT',
+              headers: {
+                  'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(updatedData),
+          });
+      }
+
+      setIsEditing(false);
+      fetchDocuments(); // Refresh the document list after saving
+  } catch (err) {
+      console.error('Error saving edits:', err);
+  }
+};
+
+const handleSaveMultiple = async () => {
+  try {
+    await fetch(`http://localhost:4000/new/claims/${claimId}/documents`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(Object.values(editedDocuments)),
+    });
+
+    setIsEditingMultiple(false);
+    fetchDocuments(); // Refresh the document list after saving
+  } catch (err) {
+    console.error('Error saving edits:', err);
+  }
+};
+
 
 
 
@@ -366,7 +442,36 @@ const categories = ["Correspondence General", "First Notice of Loss", "Invoice",
                 >
                   + Bulk Upload
                 </button>
+                <button
+                  className="flex items-center justify-center text-white bg-blue-200 focus:ring-4 focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2"
+                  onClick={handleEditClick}
+                >
+                  Edit
+                </button>
+                {/* <button
+                  className="flex items-center justify-center text-orange-500 bg-slate-800 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 py-2"
+                  onClick={handleEditMultipleClick}
+                >
+                  Edit Multiple
+                </button> */}
+                {isEditingMultiple && (
+                  <button
+                    className="flex items-center justify-center text-white bg-orange-500 hover:bg-orange-600 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 py-2"
+                    onClick={handleSaveMultiple}
+                  >
+                    Save Changes
+                  </button>
+                )}
+                {isEditing && (
+                  <button
+                    className="flex items-center justify-center text-white bg-orange-500 hover:bg-orange-600 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 py-2"
+                    onClick={handleSave}
+                  >
+                    Save Changes
+                  </button>
+                )}
               </div>
+              
             </div>
 
             {/* Bulk Upload Form */}
@@ -426,6 +531,8 @@ const categories = ["Correspondence General", "First Notice of Loss", "Invoice",
                     <th scope="col" className="px-4 py-3">View File</th>
                     <th scope="col" className="px-4 py-3">Save File</th>
                     <th scope="col" className="px-4 py-3">Category</th>
+                    {/* <th scope="col" className="px-4 py-3">Edit</th> */}
+                   
                     {/* <th scope="col" className="px-4 py-3">
                       <select
                         id="category-header"
@@ -441,6 +548,8 @@ const categories = ["Correspondence General", "First Notice of Loss", "Invoice",
                     {/* </th> */}
                   </tr>
                 </thead>
+
+               {/* <div>
                 <tbody>
                   {documents.map((doc) => (
                     <tr key={doc._id} className="border-b dark:border-gray-700">
@@ -452,10 +561,49 @@ const categories = ["Correspondence General", "First Notice of Loss", "Invoice",
                       <td className="px-4 py-3"><a href="#" onClick={() => handleViewDocument(doc.fileUrl)}>View</a></td>
                       <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
                       {/* <td className="px-4 py-3"><a href="#" onClick={()=> handleReadDocument(doc._id)} >Read</a></td> */}
-                      <td className="px-4 py-3">{doc.category}</td>
+                      {/* <td className="px-4 py-3">{doc.category}</td> */}
+                      {/* <td className="px-4 py-3">Edit File</td> */}
+                    {/* </tr> */}
+                  {/* ))}
+                </tbody> */}
+                 <tbody>
+                  {documents.map((doc) => (
+                    <tr key={doc._id} className="border-b dark:border-gray-700">
+                      <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        {(isEditing || isEditingMultiple) ? (
+                          <input
+                            type="text"
+                            value={editedDocuments[doc._id]?.fileName || doc.fileName}
+                            onChange={(e) => handleInputChange(doc._id, 'fileName', e.target.value)}
+                            className="px-2 py-1 border rounded-md"
+                          />
+                        ) : (
+                          doc.fileName
+                        )}
+                      </th>
+                      <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
+                      <td className="px-4 py-3">Uploaded Document</td>
+                      <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl)}>View</a></td>
+                      <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
+                      <td className="px-4 py-3">
+                        {(isEditing || isEditingMultiple) ? (
+                          <select
+                            value={editedDocuments[doc._id]?.category || doc.category}
+                            onChange={(e) => handleInputChange(doc._id, 'category', e.target.value)}
+                            className="px-2 py-1 border rounded-md"
+                          >
+                            {categories.map((cat, index) => (
+                              <option key={index} value={cat}>{cat}</option>
+                            ))}
+                          </select>
+                        ) : (
+                          doc.category
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
+
               </table>
             </div>
           </div>
