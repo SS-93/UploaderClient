@@ -14,7 +14,7 @@ import DocumentDataTable from './components/documentdatatable/DocumentDataTable'
 import DownloadFileTest from './components/fileInput/DownloadFileTest';
 import TextModule from './components/textmodule/TextModule';
 import AgnosticInterface from './components/agnosticinterface/AgnosticInterface';
-
+import DocumentDashboard from './components/documentdatatable/documentdashboard/DocumentDashboard';
 
 function App() {
   return (
