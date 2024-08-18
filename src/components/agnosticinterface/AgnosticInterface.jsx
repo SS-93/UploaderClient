@@ -6,6 +6,7 @@ import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDa
 
 function AgnosticInterface() {
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
+  const [isAddingDocuments, setIsAddingDocuments] = useState(false);
 
   useEffect(() => {
     fetchNewlyUploadedDocuments(); // Fetch documents when component mounts
@@ -56,17 +57,42 @@ function AgnosticInterface() {
     <div>
       <h1 className="text-2xl font-bold p-4"></h1>
       <div className="p-4">
-        <DocumentDashboard documents={uploadedDocuments} />
+        <DocumentDashboard
+          documents={uploadedDocuments}
+          isAddingDocuments={isAddingDocuments}
+          setIsAddingDocuments={setIsAddingDocuments}
+          onFileChange={handleFileChange}
+        />
       </div>
       <div className="fixed bottom-0 left-0 z-50 w-full h-16 bg-white border-t border-gray-200 dark:bg-gray-700 dark:border-gray-600">
         <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
-        <label className="inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 dark:hover:bg-gray-800 group cursor-pointer">
+
+        <div className="grid h-full max-w-lg grid-cols-4 mx-auto font-medium">
+          <button
+            type="button"
+            className="inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 dark:hover:bg-gray-800 group"
+            onClick={() => setIsAddingDocuments(true)}
+          >
+            <svg
+              className="w-5 h-5 mb-2 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-500"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path d="M2 6a2 2 0 00-2 2v8a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2H2zm0 2h16v8H2V8zm7 1a1 1 0 110 2h4a1 1 0 110-2h-4zm-3 4h4a1 1 0 110 2H6a1 1 0 110-2z" />
+            </svg>
+            <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-500">
+              Add Documents
+            </span>
+          </button>
+        </div>
+        {/* <label className="inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 dark:hover:bg-gray-800 group cursor-pointer">
             <input type="file" multiple onChange={handleFileChange} className="hidden" />
             <svg className="w-5 h-5 mb-2 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20">
               <path d="M2 6a2 2 0 00-2 2v8a2 2 0 002 2h16a2 2 0 002-2V8a2 2 0 00-2-2H2zm0 2h16v8H2V8zm7 1a1 1 0 110 2h4a1 1 0 110-2h-4zm-3 4h4a1 1 0 110 2H6a1 1 0 110-2z" />
             </svg>
             <span className="text-sm text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-500">Upload</span>
-          </label>
+          </label> */}
           {/* <button
             type="button"
             className="inline-flex flex-col items-center justify-center px-5 hover:bg-gray-50 dark:hover:bg-gray-800 group"
