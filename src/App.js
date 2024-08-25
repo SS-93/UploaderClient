@@ -15,6 +15,8 @@ import DownloadFileTest from './components/fileInput/DownloadFileTest';
 import TextModule from './components/textmodule/TextModule';
 import AgnosticInterface from './components/agnosticinterface/AgnosticInterface';
 import DocumentDashboard from './components/documentdatatable/documentdashboard/DocumentDashboard';
+import ParkingSession from './components/parkingsession/ParkingSession';
+
 
 function App() {
   return (
@@ -25,7 +27,7 @@ function App() {
         <Route path='/home' element={<Home />} />
         <Route path='/allclaims' element={<AllClaims />} />
         <Route path='/claims/:claimId' element={<ClaimProfile />} />
-        <Route path='/test' className= '' element={<AgnosticInterface /> } />
+        <Route path='/test' className= '' element={<ParkingSession /> } />
         <Route path ='/newclaim' element={ <NewClaim/> }/>
         <Route path='/upload' element = {<FileInput/>} />
         
