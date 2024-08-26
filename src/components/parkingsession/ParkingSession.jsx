@@ -4,6 +4,7 @@ import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDa
 import AgnosticInterface from '../agnosticinterface/AgnosticInterface';
 import DocumentViewer from '../documentviewer/DocumentViewer';
 import { useParams } from 'react-router-dom';
+import TextModule from '../textmodule/TextModule';
 
 function ParkingSession() {
     const { parkingSessionId } = useParams();
@@ -39,6 +40,9 @@ function ParkingSession() {
 
     return (
         <div className="parking-session-container">
+
+            <DocumentViewer/>
+            <TextModule/>
             <DocumentDashboard
                 documents={documents}
                 parkingSessionId={parkingSessionId}
