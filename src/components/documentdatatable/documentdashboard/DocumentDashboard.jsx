@@ -297,10 +297,35 @@ const handleSave = async () => {
     }
   };
 
-  const handleSortDocument = async (documentId) => {
+//   const handleSortDocument = async (documentId) => {
+//     try {
+//       setLoading(true);
+//       const res = await fetch(`http://localhost:4000/dms/sort-document/${claimId}/${documentId}`, {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//       });
+
+//       if (res.ok) {
+//         await fetchDocuments(); // Refresh the documents after sorting
+//         alert('Document sorted successfully');
+//       } else {
+//         const errorData = await res.json();
+//         alert('Failed to sort document: ' + errorData.message);
+//       }
+//     } catch (err) {
+//       console.error('Error sorting document:', err);
+//       alert('Failed to sort document: ' + err.message);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+
+const handleSortDocuments = async (documentId) => {
     try {
       setLoading(true);
-      const res = await fetch(`http://localhost:4000/dms/move-documents/${documentId}/${claimId}`, {
+      const res = await fetch(`http://localhost:4000/dms/sort-document/${documentId}/66bdb7696fde5a1ad4d912ec`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -321,7 +346,6 @@ const handleSave = async () => {
       setLoading(false);
     }
 };
-
 
   const handleBulkSortDocuments = async () => {
     try {
