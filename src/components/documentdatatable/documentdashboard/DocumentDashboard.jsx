@@ -322,18 +322,17 @@ const handleSave = async () => {
 //     }
 //   };
 
-const handleSortDocuments = async (documentId) => {
+const handleSortDocuments = async (documentId, claimId) => {
     try {
-      setLoading(true);
-      const res = await fetch(`http://localhost:4000/dms/sort-document/${documentId}/66bdb7696fde5a1ad4d912ec`, {
+      const res = await fetch(`http://localhost:4000/dms/move-document/66bdb7696fde5a1ad4d912ec/${documentId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-
+  
       if (res.ok) {
-        await fetchSortDocuments(); // Refresh the documents after sorting
+        await fetchDocuments(); // Refresh the documents after sorting
         alert('Document sorted successfully');
       } else {
         const errorData = await res.json();
@@ -342,10 +341,34 @@ const handleSortDocuments = async (documentId) => {
     } catch (err) {
       console.error('Error sorting document:', err);
       alert('Failed to sort document: ' + err.message);
-    } finally {
-      setLoading(false);
     }
-};
+  };
+  
+
+// const handleSortDocuments = async (documentId) => {
+//     try {
+//       setLoading(true);
+//       const res = await fetch(`http://localhost:4000/dms/sort-document/${documentId}/66bdb7696fde5a1ad4d912ec`, {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//       });
+
+//       if (res.ok) {
+//         await fetchSortDocuments(); // Refresh the documents after sorting
+//         alert('Document sorted successfully');
+//       } else {
+//         const errorData = await res.json();
+//         alert('Failed to sort document: ' + errorData.message);
+//       }
+//     } catch (err) {
+//       console.error('Error sorting document:', err);
+//       alert('Failed to sort document: ' + err.message);
+//     } finally {
+//       setLoading(false);
+//     }
+// };
 
   const handleBulkSortDocuments = async () => {
     try {
@@ -526,7 +549,7 @@ const handleSortDocuments = async (documentId) => {
       
       <a href="#" onClick={() => handleDeleteClick(doc._id)}>Delete</a> {/* Trigger delete modal */}
 
-      <td className="px-4 py-3"><a href="#"onClick={() => handleBulkSortDocuments(doc._id)} >Sort</a></td>
+      <td className="px-4 py-3"><a href="#"onClick={() => handleSortDocuments(doc._id)} >Sort</a></td>
     </tr>
                     ))}
                   </tbody>
