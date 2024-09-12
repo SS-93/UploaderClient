@@ -291,7 +291,7 @@ function TextModule({ documentUrl, documentId, textContent = '', onTextExtracted
   // Function to save OCR text to the backend with the documentId
   const saveOcrText = async (documentId, ocrText) => {
     try {
-      const response = await fetch(`http://localhost:4000/dms/documents/${1917}`, {
+      const response = await fetch(`http://localhost:4000/dms/documents/${documentId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -388,5 +388,3 @@ function TextModule({ documentUrl, documentId, textContent = '', onTextExtracted
 }
 
 export default TextModule;
-
-

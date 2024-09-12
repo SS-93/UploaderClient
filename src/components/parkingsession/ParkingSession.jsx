@@ -121,7 +121,7 @@ function ParkingSession() {
   const { parkingSessionId, parkId } = useParams();
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentUrl, setSelectedDocumentUrl] = useState('');
-  const [selectedDocumentId, setSelectedDocumentId] = useState(''); 
+  const [selectedDocumentId, setSelectedDocumentId] = useState(''); // This will hold the `documentId` (not _id)
   const [isAddingDocuments, setIsAddingDocuments] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [ocrText, setOcrText] = useState("");
@@ -163,13 +163,13 @@ function ParkingSession() {
     }
   };
 
-  const handleDocumentView = async (url, id) => {
+  const handleDocumentView = async (url, documentId) => {
     setSelectedDocumentUrl(url);
-    setSelectedDocumentId(id);
+    setSelectedDocumentId(documentId); // Set the `documentId` for viewing and editing
 
-    if (id) {  // Ensure the id is valid
+    if (documentId) {
       try {
-        const response = await fetch(`http://localhost:4000/dms/get-document/${id}`);
+        const response = await fetch(`http://localhost:4000/dms/document/${documentId}`);
         if (response.ok) {
           const documentData = await response.json();
           setTextContent(documentData.textContent || '');
@@ -189,7 +189,7 @@ function ParkingSession() {
 
   const handleCloseDocumentViewer = () => {
     setSelectedDocumentUrl('');
-    setSelectedDocumentId('');
+    setSelectedDocumentId(''); // Reset the `documentId`
     setTextContent('');
   };
 
@@ -205,7 +205,7 @@ function ParkingSession() {
       />
       <TextModule
         documentUrl={selectedDocumentUrl}
-        documentId={selectedDocumentId} // <-- Make sure this is being passed correctly
+        documentId={selectedDocumentId} // Correctly passing the `documentId`
         textContent={textContent}
         onTextExtracted={handleReadDocument}
       />
@@ -214,7 +214,7 @@ function ParkingSession() {
         parkingSessionId={parkingSessionId}
         isAddingDocuments={isAddingDocuments}
         setIsAddingDocuments={setIsAddingDocuments}
-        onViewDocument={handleDocumentView} // <-- Pass correct handler for viewing
+        onViewDocument={handleDocumentView} // Use correct handler with `documentId`
       />
       <AgnosticInterface
         documents={documents}
@@ -226,3 +226,4 @@ function ParkingSession() {
 }
 
 export default ParkingSession;
+

@@ -18,7 +18,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   const [isEditingMultiple, setIsEditingMultiple] = useState(false);
   const [documentToDelete, setDocumentToDelete] = useState(null); // Track the document to delete
   const [showModal, setShowModal] = useState(false); // Control the modal visibility
-
+  const [trueId, setTrueId] = useState(null); // State for the true document ID
   const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
 
   useEffect(() => {
@@ -68,25 +68,38 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   };
 
 
-const handleEditClick = () => {
-    setIsEditing(!isEditing);
-    if (!isEditing) {
-      const clonedDocuments = documents.reduce((acc, doc) => {
-        acc[doc._id] = { fileName: doc.filename, category: doc.category || 'Uncategorized' }; // Use only filename
-        return acc;
-      }, {});
-      setEditedDocuments(clonedDocuments);
-    }
-  };
+// const handleEditClick = () => {
+//     setIsEditing(!isEditing);
+//     if (!isEditing) {
+//       const clonedDocuments = documents.reduce((acc, doc) => {
+//         acc[doc._id] = { fileName: doc.filename, category: doc.category || 'Uncategorized' }; // Use only filename
+//         return acc;
+//       }, {});
+//       setEditedDocuments(clonedDocuments);
+//     }
+//   };
   
 
-  const handleInputChange = (id, field, value) => {
-    setEditedDocuments({
-      ...editedDocuments,
-      [id]: { ...editedDocuments[id], [field]: value },
-    });
-  };
-  
+const handleEditClick = () => {
+  setIsEditing(!isEditing);
+
+  if (!isEditing) {
+    // Clone the current documents state to allow editing
+    const clonedDocuments = documents.reduce((acc, doc) => {
+      acc[doc.documentId] = { fileName: doc.filename, category: doc.category || 'Uncategorized' };
+      return acc;
+    }, {});
+    setEditedDocuments(clonedDocuments);
+  }
+};
+
+const handleInputChange = (documentId, field, value) => {
+  setEditedDocuments({
+    ...editedDocuments,
+    [documentId]: { ...editedDocuments[documentId], [field]: value },
+  });
+};
+
   
   const sanitizeFileName = (fileName) => {
     return fileName.replace(/[^a-zA-Z0-9.-_]/g, '_'); // Replace invalid characters with underscores
@@ -148,38 +161,117 @@ const handleEditClick = () => {
   
 
 
+// const handleSave = async () => {
+//     try {
+//       setLoading(true);
+//       const updates = Object.entries(editedDocuments).map(([id, updatedData]) => ({
+//         _id: id,
+//         ...updatedData,
+//       }));
+  
+//       // Loop through updates and send a separate request for each document
+//       for (let update of updates) {
+//         await fetch(`http://localhost:4000/dms/documents/${update._id}`, {
+//           method: 'PUT',
+//           headers: {
+//             'Content-Type': 'application/json',
+//           },
+//           body: JSON.stringify(update),
+//         });
+//       }
+  
+//       setIsEditing(false);
+//       window.location.reload(); // Reload page to fetch updated data
+//       fetchNewlyUploadedDocuments();
+//       fetchParkedDocuments();
+//       if (parkSessionId) fetchParkingSessionDocuments(); // Fetch session documents if parkSessionId is present
+//     } catch (err) {
+//       console.error('Error saving edits:', err);
+//     } finally {
+//       setLoading(false);
+//     }
+//   };
+// const handleSave = async () => {
+//   try {
+//     setLoading(true);
+
+//     // Prepare updates with documentId
+//     const updates = Object.entries(editedDocuments).map(([id, updatedData]) => {
+//       return {
+//         documentId: id,  // Use documentId directly
+//         fileName: updatedData.fileName,  // New file name
+//         category: updatedData.category,  // New category
+//       };
+//     });
+
+//     // Send updates to the server
+//     for (let update of updates) {
+//       const response = await fetch(`http://localhost:4000/dms/documents/edit/${update.documentId}`, {
+//         method: 'PUT',
+//         headers: {
+//           'Content-Type': 'application/json',
+//         },
+//         body: JSON.stringify(update),
+//       });
+
+//       if (!response.ok) {
+//         console.error(`Failed to update document with ID ${update.documentId}`);
+//         continue;
+//       }
+//     }
+
+//     setIsEditing(false);
+//     fetchNewlyUploadedDocuments();
+//     fetchParkedDocuments();
+//     if (parkSessionId) fetchParkingSessionDocuments();
+//   } catch (err) {
+//     console.error('Error saving edits:', err);
+//   } finally {
+//     setLoading(false);
+//   }
+// };
+
+
 const handleSave = async () => {
-    try {
-      setLoading(true);
-      const updates = Object.entries(editedDocuments).map(([id, updatedData]) => ({
-        _id: id,
+  try {
+    setLoading(true);
+
+    // Prepare the updates array for multiple documents
+    const updates = Object.entries(editedDocuments).map(([id, updatedData]) => {
+      const documentId = updatedData.trueId || id;  // Ensure documentId is used
+      return {
+        documentId,  // Send documentId with the update payload
         ...updatedData,
-      }));
-  
-      // Loop through updates and send a separate request for each document
-      for (let update of updates) {
-        await fetch(`http://localhost:4000/dms/documents/${update._id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(update),
-        });
-      }
-  
-      setIsEditing(false);
-      window.location.reload(); // Reload page to fetch updated data
-      fetchNewlyUploadedDocuments();
-      fetchParkedDocuments();
-      if (parkSessionId) fetchParkingSessionDocuments(); // Fetch session documents if parkSessionId is present
-    } catch (err) {
-      console.error('Error saving edits:', err);
-    } finally {
-      setLoading(false);
+      };
+    });
+
+    // Send all document updates to the backend
+    const response = await fetch(`http://localhost:4000/dms/documents/edit/:documentId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(updates),
+    });
+
+    if (response.ok) {
+      console.log('Documents updated successfully');
+    } else {
+      console.error('Failed to update documents');
     }
-  };
-  
-  
+
+    setIsEditing(false);
+    fetchNewlyUploadedDocuments();
+    fetchParkedDocuments();
+    if (parkSessionId) fetchParkingSessionDocuments();
+  } catch (err) {
+    console.error('Error saving edits:', err);
+  } finally {
+    setLoading(false);
+  }
+};
+
+
   const handleDownloadDocument = (fileUrl) => {
     try {
       const a = document.createElement('a');
@@ -538,7 +630,7 @@ const handleSortDocuments = async (documentId, claimId) => {
       </th>
       <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
       <td className="px-4 py-3">Uploaded Document</td>
-      <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl, doc._id)}>View</a></td>
+      <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl, doc.documentId)}>View</a></td>
       <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
       <td className="px-4 py-3">
         {(isEditing || isEditingMultiple) ? (
