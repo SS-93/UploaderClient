@@ -87,18 +87,22 @@ const handleEditClick = () => {
     });
   };
   
-
+  
+  const sanitizeFileName = (fileName) => {
+    return fileName.replace(/[^a-zA-Z0-9.-_]/g, '_'); // Replace invalid characters with underscores
+  };
+  
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
     setNewDocuments(files);
     const initialDetails = files.map(file => ({
-      fileName: file.name,
+      fileName: sanitizeFileName(file.name), // Sanitize file name here
       category: 'Uncategorized',
     }));
     setDocumentDetails(initialDetails);
   };
-
-  const handleCategoryChange = (index, value) => {
+  
+    const handleCategoryChange = (index, value) => {
     const updatedDetails = [...documentDetails];
     updatedDetails[index].category = value;
     setDocumentDetails(updatedDetails);
@@ -114,13 +118,14 @@ const handleEditClick = () => {
     if (parkId) {
       formData.append('parkId', parkId);
     }
+  
     try {
       setShowLoadingBar(true);
       const res = await fetch(`http://localhost:4000/dms/bulk-uploads`, {
         method: 'POST',
         body: formData,
       });
-
+  
       if (res.ok) {
         const result = await res.json();
         setTimeout(() => {
@@ -129,15 +134,18 @@ const handleEditClick = () => {
           fetchParkedDocuments();
         }, 80);
       } else {
-        console.error('Bulk upload failed');
+        const errorData = await res.json();
+        console.error('Bulk upload failed:', errorData.message);
+        alert(`Error: ${errorData.message}`);
         setShowLoadingBar(false);
       }
     } catch (err) {
-      console.error(err);
+      console.error('Error during bulk upload:', err);
+      alert('An error occurred during the upload process.');
       setShowLoadingBar(false);
     }
   };
-
+  
 
 
 const handleSave = async () => {
@@ -399,6 +407,9 @@ const handleSortDocuments = async (documentId, claimId) => {
     }
   };
 
+ 
+  
+
   const allDocuments = [...fetchedDocuments, ...parkedDocuments];
 
   return (
@@ -507,29 +518,27 @@ const handleSortDocuments = async (documentId, claimId) => {
                       <th scope="col" className="px-4 py-3">Category</th>
                       <th scope="col" className="px-4 py-3">Remove File</th>
                       <th scope="col" className="px-4 py-3">Sort File</th>
+                      <th scope="col" className="px-4 py-3">Update File</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {allDocuments.map((doc) => (
-                    
-                    <tr key={doc._id} className="border-b dark:border-gray-700">
-    
-
-<th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+  {allDocuments.map((doc) => (
+    <tr key={doc._id} className="border-b dark:border-gray-700">
+      <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
         {(isEditing || isEditingMultiple) ? (
           <input
             type="text"
-            value={editedDocuments[doc._id]?.fileName || doc.filename} // Use filename directly
+            value={editedDocuments[doc._id]?.fileName || doc.filename} // Editable file name
             onChange={(e) => handleInputChange(doc._id, 'fileName', e.target.value)}
             className="px-2 py-1 border rounded-md"
           />
         ) : (
-          doc.filename || 'Unnamed Document' // Fallback to filename or a default
+          doc.filename || 'Unnamed Document'
         )}
       </th>
       <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
       <td className="px-4 py-3">Uploaded Document</td>
-      <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl)}>View</a></td>
+      <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl, doc._id)}>View</a></td>
       <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
       <td className="px-4 py-3">
         {(isEditing || isEditingMultiple) ? (
@@ -546,13 +555,12 @@ const handleSortDocuments = async (documentId, claimId) => {
           doc.category || 'Uncategorized'
         )}
       </td>
-      
-      <a href="#" onClick={() => handleDeleteClick(doc._id)}>Delete</a> {/* Trigger delete modal */}
-
-      <td className="px-4 py-3"><a href="#"onClick={() => handleSortDocuments(doc._id)} >Sort</a></td>
+      <td className="px-4 py-3"><a href="#" onClick={() => handleDeleteClick(doc._id)}>Delete</a></td>
+      <td className="px-4 py-3"><a href="#" onClick={() => handleSortDocuments(doc._id)}>Sort</a></td>
     </tr>
-                    ))}
-                  </tbody>
+  ))}
+</tbody>
+
                 </table>
               </div>
             </div>
