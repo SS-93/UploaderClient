@@ -1,3 +1,115 @@
+// // import React, { useState, useEffect } from 'react';
+// // import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDashboard';
+// // import AgnosticInterface from '../agnosticinterface/AgnosticInterface';
+// // import DocumentViewer from '../documentviewer/DocumentViewer';
+// // import { useParams } from 'react-router-dom';
+// // import TextModule from '../textmodule/TextModule';
+
+// // function ParkingSession() {
+// //   const { parkingSessionId, parkId } = useParams();
+// //   const [documents, setDocuments] = useState([]);
+// //   const [selectedDocumentUrl, setSelectedDocumentUrl] = useState('');
+// //   const [selectedDocumentId, setSelectedDocumentId] = useState(''); 
+// //   const [isAddingDocuments, setIsAddingDocuments] = useState(false);
+// //   const [uploadedDocuments, setUploadedDocuments] = useState([]);
+// //   const [ocrText, setOcrText] = useState("");
+// //   const [textContent, setTextContent] = useState(''); // State to store the current text content
+
+// //   useEffect(() => {
+// //     fetchNewlyUploadedDocuments(); // Fetch documents when component mounts
+// //   }, []);
+
+// //   const fetchNewlyUploadedDocuments = async () => {
+// //     try {
+// //       const response = await fetch('http://localhost:4000/dms/recent-uploads');
+// //       if (response.ok) {
+// //         const result = await response.json();
+// //         setUploadedDocuments(result.files); // Set state with the newly fetched documents
+// //       } else {
+// //         console.error('Failed to fetch newly uploaded documents');
+// //       }
+// //     } catch (error) {
+// //       console.error('Error fetching newly uploaded documents:', error);
+// //     }
+// //   };
+
+// //   useEffect(() => {
+// //     fetchDocuments(); // Fetch documents when component mounts
+// //   }, [parkingSessionId]);
+
+// //   const fetchDocuments = async () => {
+// //     try {
+// //       const response = await fetch(`http://localhost:4000/dms/parked-uploads/${parkId}`);
+// //       if (response.ok) {
+// //         const result = await response.json();
+// //         setDocuments(result.files); // Update state with fetched documents
+// //       } else {
+// //         console.error('Failed to fetch documents');
+// //       }
+// //     } catch (error) {
+// //       console.error('Error fetching documents:', error);
+// //     }
+// //   };
+
+// //   const handleDocumentView = async (url, id) => {
+// //     setSelectedDocumentUrl(url);
+// //     setSelectedDocumentId(id);
+
+// //     // Fetch the document details, including text content
+// //     try {
+// //       const response = await fetch(`http://localhost:4000/dms/get-document/${id}`); // New endpoint to get document details
+// //       if (response.ok) {
+// //         const documentData = await response.json();
+// //         setTextContent(documentData.textContent || ''); // Update the text content state
+// //       } else {
+// //         console.error('Failed to fetch document details');
+// //         setTextContent(''); // Clear text content if fetching fails
+// //       }
+// //     } catch (error) {
+// //       console.error('Error fetching document details:', error);
+// //       setTextContent(''); // Clear text content if error occurs
+// //     }
+// //   };
+
+// //   const handleCloseDocumentViewer = () => {
+// //     setSelectedDocumentUrl('');
+// //     setSelectedDocumentId('');
+// //     setTextContent(''); // Clear text content when viewer is closed
+// //   };
+
+// //   const handleReadDocument = (text) => {
+// //     setOcrText(text);
+// //   };
+
+// //   return (
+// //     <div className="parking-session-container">
+// //       <DocumentViewer
+// //         documentUrl={selectedDocumentUrl}
+// //         onClose={handleCloseDocumentViewer}
+// //       />
+// //       <TextModule
+// //         documentUrl={selectedDocumentUrl}
+// //         documentId={selectedDocumentId} 
+// //         textContent={textContent} // Pass the current text content to TextModule
+// //         onTextExtracted={handleReadDocument}
+// //       />
+// //       <DocumentDashboard
+// //         documents={documents}
+// //         parkingSessionId={parkingSessionId}
+// //         isAddingDocuments={isAddingDocuments}
+// //         setIsAddingDocuments={setIsAddingDocuments}
+// //         onViewDocument={handleDocumentView} // Pass the handler to DocumentDashboard
+// //       />
+// //       <AgnosticInterface
+// //         documents={documents}
+// //         parkingSessionId={parkingSessionId}
+// //         onDocumentView={handleDocumentView}
+// //       />
+// //     </div>
+// //   );
+// // }
+
+// // export default ParkingSession;
 // import React, { useState, useEffect } from 'react';
 // import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDashboard';
 // import AgnosticInterface from '../agnosticinterface/AgnosticInterface';
@@ -9,14 +121,14 @@
 //   const { parkingSessionId, parkId } = useParams();
 //   const [documents, setDocuments] = useState([]);
 //   const [selectedDocumentUrl, setSelectedDocumentUrl] = useState('');
-//   const [selectedDocumentId, setSelectedDocumentId] = useState(''); 
+//   const [selectedDocumentId, setSelectedDocumentId] = useState(''); // This will hold the `documentId` (not _id)
 //   const [isAddingDocuments, setIsAddingDocuments] = useState(false);
 //   const [uploadedDocuments, setUploadedDocuments] = useState([]);
 //   const [ocrText, setOcrText] = useState("");
-//   const [textContent, setTextContent] = useState(''); // State to store the current text content
+//   const [textContent, setTextContent] = useState('');
 
 //   useEffect(() => {
-//     fetchNewlyUploadedDocuments(); // Fetch documents when component mounts
+//     fetchNewlyUploadedDocuments();
 //   }, []);
 
 //   const fetchNewlyUploadedDocuments = async () => {
@@ -24,7 +136,7 @@
 //       const response = await fetch('http://localhost:4000/dms/recent-uploads');
 //       if (response.ok) {
 //         const result = await response.json();
-//         setUploadedDocuments(result.files); // Set state with the newly fetched documents
+//         setUploadedDocuments(result.files);
 //       } else {
 //         console.error('Failed to fetch newly uploaded documents');
 //       }
@@ -34,7 +146,7 @@
 //   };
 
 //   useEffect(() => {
-//     fetchDocuments(); // Fetch documents when component mounts
+//     fetchDocuments();
 //   }, [parkingSessionId]);
 
 //   const fetchDocuments = async () => {
@@ -42,7 +154,7 @@
 //       const response = await fetch(`http://localhost:4000/dms/parked-uploads/${parkId}`);
 //       if (response.ok) {
 //         const result = await response.json();
-//         setDocuments(result.files); // Update state with fetched documents
+//         setDocuments(result.files);
 //       } else {
 //         console.error('Failed to fetch documents');
 //       }
@@ -51,30 +163,34 @@
 //     }
 //   };
 
-//   const handleDocumentView = async (url, id) => {
+//   const handleDocumentView = async (url, documentId) => {
 //     setSelectedDocumentUrl(url);
-//     setSelectedDocumentId(id);
+//     setSelectedDocumentId(documentId); // Set the `documentId` for viewing and editing
 
-//     // Fetch the document details, including text content
-//     try {
-//       const response = await fetch(`http://localhost:4000/dms/get-document/${id}`); // New endpoint to get document details
-//       if (response.ok) {
-//         const documentData = await response.json();
-//         setTextContent(documentData.textContent || ''); // Update the text content state
-//       } else {
-//         console.error('Failed to fetch document details');
-//         setTextContent(''); // Clear text content if fetching fails
+//     if (documentId) {
+//       try {
+//         const response = await fetch(`http://localhost:4000/dms/document/${documentId}`);
+//         if (response.ok) {
+//           const documentData = await response.json();
+//           setTextContent(documentData.textContent || '');
+//         } else {
+//           console.error('Failed to fetch document details');
+//           setTextContent('');
+//         }
+//       } catch (error) {
+//         console.error('Error fetching document details:', error);
+//         setTextContent('');
 //       }
-//     } catch (error) {
-//       console.error('Error fetching document details:', error);
-//       setTextContent(''); // Clear text content if error occurs
+//     } else {
+//       console.error('Invalid document ID');
+//       setTextContent('');
 //     }
 //   };
 
 //   const handleCloseDocumentViewer = () => {
 //     setSelectedDocumentUrl('');
-//     setSelectedDocumentId('');
-//     setTextContent(''); // Clear text content when viewer is closed
+//     setSelectedDocumentId(''); // Reset the `documentId`
+//     setTextContent('');
 //   };
 
 //   const handleReadDocument = (text) => {
@@ -89,8 +205,8 @@
 //       />
 //       <TextModule
 //         documentUrl={selectedDocumentUrl}
-//         documentId={selectedDocumentId} 
-//         textContent={textContent} // Pass the current text content to TextModule
+//         documentId={selectedDocumentId} // Correctly passing the `documentId`
+//         textContent={textContent}
 //         onTextExtracted={handleReadDocument}
 //       />
 //       <DocumentDashboard
@@ -98,7 +214,7 @@
 //         parkingSessionId={parkingSessionId}
 //         isAddingDocuments={isAddingDocuments}
 //         setIsAddingDocuments={setIsAddingDocuments}
-//         onViewDocument={handleDocumentView} // Pass the handler to DocumentDashboard
+//         onViewDocument={handleDocumentView} // Use correct handler with `documentId`
 //       />
 //       <AgnosticInterface
 //         documents={documents}
@@ -110,6 +226,7 @@
 // }
 
 // export default ParkingSession;
+
 import React, { useState, useEffect } from 'react';
 import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDashboard';
 import AgnosticInterface from '../agnosticinterface/AgnosticInterface';
@@ -121,7 +238,7 @@ function ParkingSession() {
   const { parkingSessionId, parkId } = useParams();
   const [documents, setDocuments] = useState([]);
   const [selectedDocumentUrl, setSelectedDocumentUrl] = useState('');
-  const [selectedDocumentId, setSelectedDocumentId] = useState(''); // This will hold the `documentId` (not _id)
+  const [selectedOcrId, setSelectedOcrId] = useState(''); // Updated state variable
   const [isAddingDocuments, setIsAddingDocuments] = useState(false);
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [ocrText, setOcrText] = useState("");
@@ -163,33 +280,33 @@ function ParkingSession() {
     }
   };
 
-  const handleDocumentView = async (url, documentId) => {
+  const handleDocumentView = async (url, OcrId) => {
     setSelectedDocumentUrl(url);
-    setSelectedDocumentId(documentId); // Set the `documentId` for viewing and editing
+    setSelectedOcrId(OcrId); // Updated to set OcrId
 
-    if (documentId) {
+    if (OcrId) {
       try {
-        const response = await fetch(`http://localhost:4000/dms/document/${documentId}`);
+        const response = await fetch(`http://localhost:4000/dms/ocr-text/${OcrId}`);
         if (response.ok) {
-          const documentData = await response.json();
-          setTextContent(documentData.textContent || '');
+          const data = await response.json();
+          setTextContent(data.document.textContent || '');
         } else {
-          console.error('Failed to fetch document details');
+          console.error('Failed to fetch OCR text content');
           setTextContent('');
         }
       } catch (error) {
-        console.error('Error fetching document details:', error);
+        console.error('Error fetching OCR text content:', error);
         setTextContent('');
       }
     } else {
-      console.error('Invalid document ID');
+      console.error('Invalid OcrId');
       setTextContent('');
     }
   };
 
   const handleCloseDocumentViewer = () => {
     setSelectedDocumentUrl('');
-    setSelectedDocumentId(''); // Reset the `documentId`
+    setSelectedOcrId(''); // Reset the `OcrId`
     setTextContent('');
   };
 
@@ -205,7 +322,7 @@ function ParkingSession() {
       />
       <TextModule
         documentUrl={selectedDocumentUrl}
-        documentId={selectedDocumentId} // Correctly passing the `documentId`
+        OcrId={selectedOcrId} // Updated to pass `OcrId`
         textContent={textContent}
         onTextExtracted={handleReadDocument}
       />
@@ -214,7 +331,7 @@ function ParkingSession() {
         parkingSessionId={parkingSessionId}
         isAddingDocuments={isAddingDocuments}
         setIsAddingDocuments={setIsAddingDocuments}
-        onViewDocument={handleDocumentView} // Use correct handler with `documentId`
+        onViewDocument={handleDocumentView} // Ensure `onViewDocument` passes OcrId
       />
       <AgnosticInterface
         documents={documents}
@@ -226,4 +343,5 @@ function ParkingSession() {
 }
 
 export default ParkingSession;
+
 

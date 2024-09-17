@@ -4,7 +4,7 @@ import DocumentViewer from '../../documentviewer/DocumentViewer';
 import TextModule from '../../textmodule/TextModule';
 
 
-function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId }) {
+function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, ocrID, parkSessionId }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
   const [parkedDocuments, setParkedDocuments] = useState([]);
@@ -629,7 +629,7 @@ const handleSortDocuments = async (documentId, claimId) => {
       </th>
       <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
       <td className="px-4 py-3">Uploaded Document</td>
-      <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl, doc.documentId)}>View</a></td>
+      <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl, doc.OcrId, doc.documentId)}>View</a></td>
       <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
       <td className="px-4 py-3">
         {(isEditing || isEditingMultiple) ? (
