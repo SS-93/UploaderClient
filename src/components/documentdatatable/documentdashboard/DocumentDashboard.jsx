@@ -93,10 +93,10 @@ const handleEditClick = () => {
   }
 };
 
-const handleInputChange = (documentId, field, value) => {
+const handleInputChange = (id, field, value) => {
   setEditedDocuments({
     ...editedDocuments,
-    [documentId]: { ...editedDocuments[documentId], [field]: value },
+    [id]: { ...editedDocuments[id], [field]: value },
   });
 };
 
@@ -232,32 +232,31 @@ const handleInputChange = (documentId, field, value) => {
 // };
 
 
+// handleSave function
 const handleSave = async () => {
   try {
     setLoading(true);
+    const updates = Object.entries(editedDocuments).map(([id, updatedData]) => ({
+      id, // Use the _id here
+      ...updatedData,
+    }));
 
-    // Prepare the updates array for multiple documents
-    const updates = Object.entries(editedDocuments).map(([id, updatedData]) => {
-      const documentId = updatedData.trueId || id;  // Ensure documentId is used
-      return {
-        documentId,  // Send documentId with the update payload
-        ...updatedData,
-      };
-    });
+    for (const update of updates) {
+      const response = await fetch(`http://localhost:4000/dms/documents/${update.id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileName: update.fileName,
+          category: update.category,
+        }),
+      });
 
-    // Send all document updates to the backend
-    const response = await fetch(`http://localhost:4000/dms/documents/edit/:documentId}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(updates),
-    });
-
-    if (response.ok) {
-      console.log('Documents updated successfully');
-    } else {
-      console.error('Failed to update documents');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(`Failed to update document with ID ${update.id}: ${errorData.error}`);
+      }
     }
 
     setIsEditing(false);
@@ -266,11 +265,11 @@ const handleSave = async () => {
     if (parkSessionId) fetchParkingSessionDocuments();
   } catch (err) {
     console.error('Error saving edits:', err);
+    alert(`Failed to save changes: ${err.message}`);
   } finally {
     setLoading(false);
   }
 };
-
 
   const handleDownloadDocument = (fileUrl) => {
     try {
