@@ -3,8 +3,7 @@ import LoadingBar from '../../loadingbar/LoadingBar';
 import DocumentViewer from '../../documentviewer/DocumentViewer';
 import TextModule from '../../textmodule/TextModule';
 
-
-function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, ocrID, parkSessionId }) {
+function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
   const [parkedDocuments, setParkedDocuments] = useState([]);
@@ -16,25 +15,30 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, oc
   const [showLoadingBar, setShowLoadingBar] = useState(false);
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [isEditingMultiple, setIsEditingMultiple] = useState(false);
-  const [documentToDelete, setDocumentToDelete] = useState(null); // Track the document to delete
-  const [showModal, setShowModal] = useState(false); // Control the modal visibility
-  const [trueId, setTrueId] = useState(null); // State for the true document ID
+  const [documentToDelete, setDocumentToDelete] = useState(null);
+  const [showModal, setShowModal] = useState(false);
+  const [trueId, setTrueId] = useState(null);
   const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
 
   useEffect(() => {
     fetchNewlyUploadedDocuments();
     if (parkId) {
-      fetchNewlyUploadedDocuments();
+      fetchParkedDocuments();
     }
-  }, [parkId]);
+    if (parkSessionId) {
+      fetchParkingSessionDocuments();
+    }
+  }, [parkId, parkSessionId]);
 
   const fetchNewlyUploadedDocuments = async () => {
     try {
       const response = await fetch('http://localhost:4000/dms/recent-uploads');
       if (response.ok) {
         const result = await response.json();
-        setFetchedDocuments(result.files);
-        setDocuments(prevDocuments => [...prevDocuments, ...result.files]);
+        // Use a Set to ensure uniqueness based on OcrId
+        const uniqueDocuments = Array.from(new Set(result.files.map(doc => doc.OcrId)))
+          .map(OcrId => result.files.find(doc => doc.OcrId === OcrId));
+        setDocuments(uniqueDocuments);
       } else {
         console.error('Failed to fetch newly uploaded documents');
       }
@@ -49,7 +53,10 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, oc
       if (!res.ok) throw new Error('Failed to fetch parked documents');
       const data = await res.json();
       setParkedDocuments(data.files);
-      setDocuments(prevDocuments => [...prevDocuments, ...data.files]);
+      setDocuments(prevDocuments => {
+        const newDocIds = new Set(data.files.map(doc => doc.OcrId));
+        return [...prevDocuments.filter(doc => !newDocIds.has(doc.OcrId)), ...data.files];
+      });
     } catch (err) {
       console.error('Error fetching parked documents:', err);
     }
@@ -61,288 +68,160 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, oc
       if (!res.ok) throw new Error('Failed to fetch parking session documents');
       const data = await res.json();
       setParkedDocuments(data.files);
-      setDocuments(prevDocuments => [...prevDocuments, ...data.files]);
+      setDocuments(prevDocuments => {
+        const newDocIds = new Set(data.files.map(doc => doc.OcrId));
+        return [...prevDocuments.filter(doc => !newDocIds.has(doc.OcrId)), ...data.files];
+      });
     } catch (err) {
       console.error('Error fetching parking session documents:', err);
     }
   };
 
-
-// const handleEditClick = () => {
-//     setIsEditing(!isEditing);
-//     if (!isEditing) {
-//       const clonedDocuments = documents.reduce((acc, doc) => {
-//         acc[doc._id] = { fileName: doc.filename, category: doc.category || 'Uncategorized' }; // Use only filename
-//         return acc;
-//       }, {});
-//       setEditedDocuments(clonedDocuments);
-//     }
-//   };
-  
-
-const handleEditClick = () => {
-  setIsEditing(!isEditing);
-
-  if (!isEditing) {
-    // Clone the current documents state to allow editing
-    const clonedDocuments = documents.reduce((acc, doc) => {
-      acc[doc.documentId] = { fileName: doc.filename, category: doc.category || 'Uncategorized' };
-      return acc;
-    }, {});
-    setEditedDocuments(clonedDocuments);
-  }
-};
-
-const handleInputChange = (id, field, value) => {
-  setEditedDocuments({
-    ...editedDocuments,
-    [id]: { ...editedDocuments[id], [field]: value },
-  });
-};
-
-  
-  const sanitizeFileName = (fileName) => {
-    return fileName.replace(/[^a-zA-Z0-9.-_]/g, '_'); // Replace invalid characters with underscores
+  const handleEditClick = () => {
+    setIsEditing(!isEditing);
+    if (!isEditing) {
+      const editableDocuments = documents.reduce((acc, doc) => {
+        acc[doc.OcrId] = { fileName: doc.fileName, category: doc.category || 'Uncategorized' };
+        return acc;
+      }, {});
+      setEditedDocuments(editableDocuments);
+    } else {
+      setEditedDocuments({});
+    }
   };
-  
+
   const handleFileChange = (event) => {
     const files = Array.from(event.target.files);
-    setNewDocuments(files);
-    const initialDetails = files.map(file => ({
-      fileName: sanitizeFileName(file.name), // Sanitize file name here
-      category: 'Uncategorized',
+    const newDocs = files.map(file => ({
+      file,
+      fileName: file.name,
+      category: ''
     }));
-    setDocumentDetails(initialDetails);
-  };
-  
-    const handleCategoryChange = (index, value) => {
-    const updatedDetails = [...documentDetails];
-    updatedDetails[index].category = value;
-    setDocumentDetails(updatedDetails);
+    setNewDocuments(newDocs);
   };
 
-  const onBulkUploadSubmit = async (e) => {
-    e.preventDefault();
+  const handleNewDocumentChange = (index, field, value) => {
+    const updatedNewDocuments = [...newDocuments];
+    updatedNewDocuments[index][field] = value;
+    setNewDocuments(updatedNewDocuments);
+  };
+
+  const onBulkUploadSubmit = async (event) => {
+    event.preventDefault();
+    setShowLoadingBar(true);
+
     const formData = new FormData();
-    newDocuments.forEach((file, index) => {
-      formData.append('documents', file, documentDetails[index].fileName);
-      formData.append('category', documentDetails[index].category);
+    newDocuments.forEach((doc, index) => {
+      formData.append('documents', doc.file);
+      formData.append(`fileName${index}`, doc.fileName);
+      formData.append(`category${index}`, doc.category);
     });
+
     if (parkId) {
       formData.append('parkId', parkId);
     }
-  
+
     try {
-      setShowLoadingBar(true);
-      const res = await fetch(`http://localhost:4000/dms/bulk-uploads`, {
+      const response = await fetch('http://localhost:4000/dms/bulk-upload', {
         method: 'POST',
         body: formData,
       });
-  
-      if (res.ok) {
-        const result = await res.json();
-        setTimeout(() => {
-          setShowLoadingBar(false);
-          fetchNewlyUploadedDocuments();
-          fetchParkedDocuments();
-        }, 80);
+
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Bulk upload successful:', result);
+        setNewDocuments([]);
+        setShowBulkUpload(false);
+        await fetchNewlyUploadedDocuments();
+        if (parkId) await fetchParkedDocuments();
       } else {
-        const errorData = await res.json();
-        console.error('Bulk upload failed:', errorData.message);
-        alert(`Error: ${errorData.message}`);
-        setShowLoadingBar(false);
+        console.error('Bulk upload failed');
+        alert('Failed to upload files');
       }
-    } catch (err) {
-      console.error('Error during bulk upload:', err);
-      alert('An error occurred during the upload process.');
+    } catch (error) {
+      console.error('Error during bulk upload:', error);
+      alert('Error uploading files');
+    } finally {
       setShowLoadingBar(false);
     }
   };
-  
 
-
-// const handleSave = async () => {
-//     try {
-//       setLoading(true);
-//       const updates = Object.entries(editedDocuments).map(([id, updatedData]) => ({
-//         _id: id,
-//         ...updatedData,
-//       }));
-  
-//       // Loop through updates and send a separate request for each document
-//       for (let update of updates) {
-//         await fetch(`http://localhost:4000/dms/documents/${update._id}`, {
-//           method: 'PUT',
-//           headers: {
-//             'Content-Type': 'application/json',
-//           },
-//           body: JSON.stringify(update),
-//         });
-//       }
-  
-//       setIsEditing(false);
-//       window.location.reload(); // Reload page to fetch updated data
-//       fetchNewlyUploadedDocuments();
-//       fetchParkedDocuments();
-//       if (parkSessionId) fetchParkingSessionDocuments(); // Fetch session documents if parkSessionId is present
-//     } catch (err) {
-//       console.error('Error saving edits:', err);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-// const handleSave = async () => {
-//   try {
-//     setLoading(true);
-
-//     // Prepare updates with documentId
-//     const updates = Object.entries(editedDocuments).map(([id, updatedData]) => {
-//       return {
-//         documentId: id,  // Use documentId directly
-//         fileName: updatedData.fileName,  // New file name
-//         category: updatedData.category,  // New category
-//       };
-//     });
-
-//     // Send updates to the server
-//     for (let update of updates) {
-//       const response = await fetch(`http://localhost:4000/dms/documents/edit/${update.documentId}`, {
-//         method: 'PUT',
-//         headers: {
-//           'Content-Type': 'application/json',
-//         },
-//         body: JSON.stringify(update),
-//       });
-
-//       if (!response.ok) {
-//         console.error(`Failed to update document with ID ${update.documentId}`);
-//         continue;
-//       }
-//     }
-
-//     setIsEditing(false);
-//     fetchNewlyUploadedDocuments();
-//     fetchParkedDocuments();
-//     if (parkSessionId) fetchParkingSessionDocuments();
-//   } catch (err) {
-//     console.error('Error saving edits:', err);
-//   } finally {
-//     setLoading(false);
-//   }
-// };
-
-
-// handleSave function
-const handleSave = async () => {
-  try {
-    setLoading(true);
-    const updates = Object.entries(editedDocuments).map(([id, updatedData]) => ({
-      id, // Use the _id here
-      ...updatedData,
-    }));
-
-    for (const update of updates) {
-      const response = await fetch(`http://localhost:4000/dms/documents/${update.id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileName: update.fileName,
-          category: update.category,
-        }),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(`Failed to update document with ID ${update.id}: ${errorData.error}`);
+  const handleInputChange = (OcrId, field, value) => {
+    setEditedDocuments(prev => ({
+      ...prev,
+      [OcrId]: {
+        ...prev[OcrId],
+        [field]: value
       }
-    }
-
-    setIsEditing(false);
-    fetchNewlyUploadedDocuments();
-    fetchParkedDocuments();
-    if (parkSessionId) fetchParkingSessionDocuments();
-  } catch (err) {
-    console.error('Error saving edits:', err);
-    alert(`Failed to save changes: ${err.message}`);
-  } finally {
-    setLoading(false);
-  }
-};
-
-  const handleDownloadDocument = (fileUrl) => {
-    try {
-      const a = document.createElement('a');
-      a.href = fileUrl;
-      a.download = ''; // Prompt the browser to download the file
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-    } catch (err) {
-      console.error('Error initiating download:', err);
-    }
+    }));
   };
 
-  const handleSaveMultiple = async () => {
+  const handleSave = async () => {
     try {
       setLoading(true);
-      await fetch(`http://localhost:4000/new/claims/${claimId}/documents`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(Object.values(editedDocuments)),
-      });
-
-      setIsEditingMultiple(false);
-      fetchNewlyUploadedDocuments();
+      const updates = Object.entries(editedDocuments).map(([OcrId, updatedData]) => ({
+        OcrId,
+        ...updatedData,
+      }));
+  
+      for (const update of updates) {
+        const response = await fetch(`http://localhost:4000/dms/documents/${update.OcrId}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(update),
+        });
+  
+        if (!response.ok) {
+          throw new Error(`Failed to update document with OcrId ${update.OcrId}`);
+        }
+      }
+  
+      // Update the documents state with the edited changes
+      setDocuments(prevDocuments => 
+        prevDocuments.map(doc => {
+          if (editedDocuments[doc.OcrId]) {
+            return { ...doc, ...editedDocuments[doc.OcrId] };
+          }
+          return doc;
+        })
+      );
+  
+      setIsEditing(false);
+      setEditedDocuments({});
     } catch (err) {
       console.error('Error saving edits:', err);
+      alert(`Failed to save changes: ${err.message}`);
     } finally {
       setLoading(false);
     }
   };
 
-
-  
-
-  const fetchDocuments = async () => {
-    try {
-      const response = await fetch('http://localhost:4000/dms/recent-uploads');
-      if (response.ok) {
-        const result = await response.json();
-        setDocuments(result.files);
-      } else {
-        console.error('Failed to fetch documents');
-      }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
-    }
-  };
-
-  const handleDeleteClick = (id) => {
-    setDocumentToDelete(id); // Set the document ID to delete
-    setShowModal(true); // Show the confirmation modal
+  const handleDeleteClick = (OcrId) => {
+    setDocumentToDelete(OcrId);
+    setShowModal(true);
   };
 
   const handleConfirmDelete = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:4000/dms/documents/${documentToDelete}`, {
+      const response = await (`http://localhost:4000/dms/documents/${documentToDelete}`, {
         method: 'DELETE',
       });
 
       if (response.ok) {
-        fetchDocuments(); // Refresh document list
-        setShowModal(false); // Hide modal
-        setDocumentToDelete(null); // Clear document to delete
-        window.location.reload();
+        fetchNewlyUploadedDocuments();
+        if (parkId) fetchParkedDocuments();
+        if (parkSessionId) fetchParkingSessionDocuments();
+        setShowModal(false);
+        setDocumentToDelete(null);
       } else {
-        console.error('Failed to delete document');
+        throw new Error('Failed to delete document');
       }
     } catch (error) {
       console.error('Error deleting document:', error);
+      alert(`Failed to delete document: ${error.message}`);
     } finally {
       setLoading(false);
     }
@@ -353,155 +232,49 @@ const handleSave = async () => {
     setDocumentToDelete(null);
   };
 
-
-  useEffect(() => {
-    fetchSortedDocuments();
-  }, [claimId]);
-
-  const fetchSortedDocuments = async () => {
-    setLoading(true);
+  const handleSortDocuments = async (OcrId) => {
     try {
-      const res = await fetch(`http://localhost:4000/new/claims/${claimId}/documents`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch documents');
-      }
-      const data = await res.json();
-      setDocuments(data);
-    } catch (err) {
-      console.error('Error fetching documents:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  
-
-  useEffect(() => {
-    fetchSortDocuments();
-  }, [claimId]);
-
-  const fetchSortDocuments = async () => {
-    setLoading(true); // Start loading
-    try {
-      const res = await fetch(`http://localhost:4000/new/claims/66bdb7696fde5a1ad4d912ec/documents`);
-      if (!res.ok) {
-        throw new Error('Failed to fetch documents');
-      }
-      const data = await res.json();
-      setDocuments(data);
-    } catch (err) {
-      console.error('Error fetching documents:', err);
-    } finally {
-      setLoading(false); // End loading
-    }
-  };
-
-//   const handleSortDocument = async (documentId) => {
-//     try {
-//       setLoading(true);
-//       const res = await fetch(`http://localhost:4000/dms/sort-document/${claimId}/${documentId}`, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//         },
-//       });
-
-//       if (res.ok) {
-//         await fetchDocuments(); // Refresh the documents after sorting
-//         alert('Document sorted successfully');
-//       } else {
-//         const errorData = await res.json();
-//         alert('Failed to sort document: ' + errorData.message);
-//       }
-//     } catch (err) {
-//       console.error('Error sorting document:', err);
-//       alert('Failed to sort document: ' + err.message);
-//     } finally {
-//       setLoading(false);
-//     }
-//   };
-
-const handleSortDocuments = async (documentId, claimId) => {
-    try {
-      const res = await fetch(`http://localhost:4000/dms/move-document/66bdb7696fde5a1ad4d912ec/${documentId}`, {
+      const res = await fetch(`http://localhost:4000/dms/move-document/${claimId}/${OcrId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
       });
-  
+
       if (res.ok) {
-        await fetchDocuments(); // Refresh the documents after sorting
+        fetchNewlyUploadedDocuments();
+        if (parkId) fetchParkedDocuments();
+        if (parkSessionId) fetchParkingSessionDocuments();
         alert('Document sorted successfully');
       } else {
         const errorData = await res.json();
-        alert('Failed to sort document: ' + errorData.message);
+        throw new Error(`Failed to sort document: ${errorData.message}`);
       }
     } catch (err) {
       console.error('Error sorting document:', err);
-      alert('Failed to sort document: ' + err.message);
+      alert(`Failed to sort document: ${err.message}`);
     }
   };
-  
 
-// const handleSortDocuments = async (documentId) => {
-//     try {
-//       setLoading(true);
-//       const res = await fetch(`http://localhost:4000/dms/sort-document/${documentId}/66bdb7696fde5a1ad4d912ec`, {
-//         method: 'POST',
-//         headers: {
-//           'Content-Type': 'application/json',
-//         },
-//       });
-
-//       if (res.ok) {
-//         await fetchSortDocuments(); // Refresh the documents after sorting
-//         alert('Document sorted successfully');
-//       } else {
-//         const errorData = await res.json();
-//         alert('Failed to sort document: ' + errorData.message);
-//       }
-//     } catch (err) {
-//       console.error('Error sorting document:', err);
-//       alert('Failed to sort document: ' + err.message);
-//     } finally {
-//       setLoading(false);
-//     }
-// };
-
-  const handleBulkSortDocuments = async () => {
+  const handleDownloadDocument = async (fileUrl) => {
     try {
-      setLoading(true);
-      const filter = {}; // Define your filter criteria, for example, { category: 'Uncategorized' }
-      const batchSize = 100; // Define batch size
-
-      const res = await fetch(`http://localhost:4000/dms/move-documents/66bdb7696fde5a1ad4d912ec`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ filter, batchSize }),
-      });
-
-      if (res.ok) {
-        await fetchDocuments(); // Refresh the documents after sorting
-        alert('Documents sorted successfully');
-      } else {
-        const errorData = await res.json();
-        alert('Failed to sort documents: ' + errorData.message);
-      }
-    } catch (err) {
-      console.error('Error sorting documents:', err);
-      alert('Failed to sort documents: ' + err.message);
-    } finally {
-      setLoading(false);
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'document';
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Error downloading document:', error);
+      alert('Failed to download document');
     }
   };
 
- 
-  
-
-  const allDocuments = [...fetchedDocuments, ...parkedDocuments];
+  const allDocuments = [...documents, ...fetchedDocuments, ...parkedDocuments];
 
   return (
     <div>
@@ -533,20 +306,19 @@ const handleSortDocuments = async (documentId, claimId) => {
                     + Bulk Upload
                   </button>
                   <button
-          className="flex items-center justify-center text-white bg-blue-200 focus:ring-4 focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2"
-          onClick={handleEditClick}
-        >
-          Edit
-        </button>
-        {isEditing && (
-          <button
-            className="flex items-center justify-center text-white bg-orange-500 hover:bg-orange-600 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 py-2"
-            onClick={handleSave}
-          >
-            Save Changes
-          </button>
+                    className="flex items-center justify-center text-white bg-blue-200 focus:ring-4 focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2"
+                    onClick={handleEditClick}
+                  >
+                    {isEditing ? 'Cancel' : 'Edit'}
+                  </button>
+                  {isEditing && (
+                    <button
+                      className="flex items-center justify-center text-white bg-orange-500 hover:bg-orange-600 focus:ring-4 focus:ring-orange-300 font-medium rounded-lg text-sm px-4 py-2"
+                      onClick={handleSave}
+                    >
+                      Save Changes
+                    </button>
                   )}
-                  
                 </div>
               </div>
 
@@ -557,26 +329,20 @@ const handleSortDocuments = async (documentId, claimId) => {
                       type="file"
                       multiple
                       onChange={handleFileChange}
-                      required
-                      className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 dark:bg-gray-700 dark:border-gray-600 focus:outline-none"
+                      className="mb-2 bg-gray-50 border border-gray-300 text-slate-600 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                     />
-                    {newDocuments.map((file, index) => (
-                      <div key={file.name} className="flex items-center space-x-3 mt-2">
+                    {newDocuments.map((doc, index) => (
+                      <div key={index} className="mb-2">
                         <input
                           type="text"
-                          value={documentDetails[index]?.fileName || ''}
-                          onChange={(e) => {
-                            const updatedDetails = [...documentDetails];
-                            updatedDetails[index].fileName = e.target.value;
-                            setDocumentDetails(updatedDetails);
-                          }}
-                          placeholder="Edit file name"
-                          className="px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-200"
-                          required
+                          value={doc.fileName}
+                          onChange={(e) => handleNewDocumentChange(index, 'fileName', e.target.value)}
+                          placeholder="File Name"
+                          className="mb-2 bg-gray-50 border border-gray-300 text-slate-600 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                         />
                         <select
-                          value={documentDetails[index]?.category || ''}
-                          onChange={(e) => handleCategoryChange(index, e.target.value)}
+                          value={doc.category}
+                          onChange={(e) => handleNewDocumentChange(index, 'category', e.target.value)}
                           className="mt-2 bg-gray-50 border border-gray-300 text-slate-600 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-3 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
                           required
                         >
@@ -609,61 +375,55 @@ const handleSortDocuments = async (documentId, claimId) => {
                       <th scope="col" className="px-4 py-3">Category</th>
                       <th scope="col" className="px-4 py-3">Remove File</th>
                       <th scope="col" className="px-4 py-3">Sort File</th>
-                      <th scope="col" className="px-4 py-3">Update File</th>
                     </tr>
                   </thead>
                   <tbody>
-  {allDocuments.map((doc) => (
-    <tr key={doc._id} className="border-b dark:border-gray-700">
-      <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-        {(isEditing || isEditingMultiple) ? (
-          <input
-            type="text"
-            value={editedDocuments[doc._id]?.fileName || doc.filename} // Editable file name
-            onChange={(e) => handleInputChange(doc._id, 'fileName', e.target.value)}
-            className="px-2 py-1 border rounded-md"
-          />
-        ) : (
-          doc.filename || 'Unnamed Document'
-        )}
-      </th>
-      <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
-      <td className="px-4 py-3">Uploaded Document</td>
-      <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl, doc.OcrId, doc.documentId)}>View</a></td>
-      <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
-      <td className="px-4 py-3">
-        {(isEditing || isEditingMultiple) ? (
-          <select
-            value={editedDocuments[doc._id]?.category || doc.category}
-            onChange={(e) => handleInputChange(doc._id, 'category', e.target.value)}
-            className="px-2 py-1 border rounded-md"
-          >
-            {categories.map((cat, index) => (
-              <option key={index} value={cat}>{cat}</option>
-            ))}
-          </select>
-        ) : (
-          doc.category || 'Uncategorized'
-        )}
-      </td>
-      <td className="px-4 py-3"><a href="#" onClick={() => handleDeleteClick(doc._id)}>Delete</a></td>
-      <td className="px-4 py-3"><a href="#" onClick={() => handleSortDocuments(doc._id)}>Sort</a></td>
-    </tr>
-  ))}
-</tbody>
-
+                    {allDocuments.map((doc) => (
+                      <tr key={doc.OcrId} className="border-b dark:border-gray-700">
+                        <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                          {(isEditing || isEditingMultiple) ? (
+                            <input
+                              type="text"
+                              value={editedDocuments[doc.OcrId]?.fileName || doc.fileName}
+                              onChange={(e) => handleInputChange(doc.OcrId, 'fileName', e.target.value)}
+                              className="px-2 py-1 border rounded-md"
+                            />
+                          ) : (
+                            doc.fileName || 'Unnamed Document'
+                          )}
+                        </th>
+                        <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
+                        <td className="px-4 py-3">Uploaded Document</td>
+                        <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl, doc.OcrId)}>View</a></td>
+                        <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
+                        <td className="px-4 py-3">
+                          {(isEditing || isEditingMultiple) ? (
+                            <select
+                              value={editedDocuments[doc.OcrId]?.category || doc.category}
+                              onChange={(e) => handleInputChange(doc.OcrId, 'category', e.target.value)}
+                              className="px-2 py-1 border rounded-md"
+                            >
+                              {categories.map((cat, index) => (
+                                <option key={index} value={cat}>{cat}</option>
+                              ))}
+                            </select>
+                          ) : (
+                            doc.category || 'Uncategorized'
+                          )}
+                        </td>
+                        <td className="px-4 py-3"><a href="#" onClick={() => handleDeleteClick(doc.OcrId)}>Delete</a></td>
+                        <td className="px-4 py-3"><a href="#" onClick={() => handleSortDocuments(doc.OcrId)}>Sort</a></td>
+                      </tr>
+                    ))}
+                  </tbody>
                 </table>
               </div>
             </div>
           </div>
         </section>
-
-     
-
-        
       )}
 
-{showModal && (
+      {showModal && (
         <div id="popup-modal" tabIndex="-1" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
           <div className="relative p-4 w-full max-w-md max-h-full">
             <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">

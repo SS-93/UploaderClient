@@ -266,19 +266,34 @@ function ParkingSession() {
     fetchDocuments();
   }, [parkingSessionId]);
 
+  // const fetchDocuments = async () => {
+  //   try {
+  //     const response = await fetch(`http://localhost:4000/dms/parked-uploads/${parkId}`);
+  //     if (response.ok) {
+  //       const result = await response.json();
+  //       setDocuments(result.files);
+  //     } else {
+  //       console.error('Failed to fetch documents');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error fetching documents:', error);
+  //   }
+  // };
+
+
   const fetchDocuments = async () => {
-    try {
-      const response = await fetch(`http://localhost:4000/dms/parked-uploads/${parkId}`);
-      if (response.ok) {
-        const result = await response.json();
-        setDocuments(result.files);
-      } else {
-        console.error('Failed to fetch documents');
-      }
-    } catch (error) {
-      console.error('Error fetching documents:', error);
+  try {
+    const response = await fetch(`http://localhost:4000/dms/parked-uploads/${parkId}`);
+    if (response.ok) {
+      const result = await response.json();
+      setDocuments(result.files);  // Assuming `_id` is part of each file in `files`
+    } else {
+      console.error('Failed to fetch documents');
     }
-  };
+  } catch (error) {
+    console.error('Error fetching documents:', error);
+  }
+};
 
   const handleDocumentView = async (url, OcrId) => {
     setSelectedDocumentUrl(url);
