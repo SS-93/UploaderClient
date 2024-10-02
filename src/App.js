@@ -16,7 +16,7 @@ import TextModule from './components/textmodule/TextModule';
 import AgnosticInterface from './components/agnosticinterface/AgnosticInterface';
 import DocumentDashboard from './components/documentdatatable/documentdashboard/DocumentDashboard';
 import ParkingSession from './components/parkingsession/ParkingSession';
-
+import AiProcessor from './components/aiprocessor/AiProcessor';
 
 function App() {
   return (
@@ -27,7 +27,8 @@ function App() {
         <Route path='/home' element={<Home />} />
         <Route path='/allclaims' element={<AllClaims />} />
         <Route path='/claims/:claimId' element={<ClaimProfile />} />
-        <Route path='/test' className= '' element={<ParkingSession /> } />
+        <Route path='/test' className= '' element={<AiProcessor /> } />
+        <Route path='/park' className= '' element={<ParkingSession/> } />
         <Route path ='/newclaim' element={ <NewClaim/> }/>
         <Route path='/upload' element = {<FileInput/>} />
         

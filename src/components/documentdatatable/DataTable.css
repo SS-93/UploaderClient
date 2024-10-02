@@ -1,0 +1,8 @@
+.document-row:hover {
+    background-color: rgba(167, 139, 250, 0.3) !important; /* Purple with opacity */
+  }
+  
+  .document-row-selected {
+    background-color: rgba(249, 115, 22, 0.7) !important; /* Orange with opacity */
+    color: white !important;
+  }

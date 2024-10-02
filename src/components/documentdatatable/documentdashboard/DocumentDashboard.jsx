@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import LoadingBar from '../../loadingbar/LoadingBar';
 import DocumentViewer from '../../documentviewer/DocumentViewer';
 import TextModule from '../../textmodule/TextModule';
+import './DashboardII.css'
+
 
 function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId }) {
   const [documents, setDocuments] = useState([]);
@@ -18,6 +20,9 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   const [documentToDelete, setDocumentToDelete] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [trueId, setTrueId] = useState(null);
+  const [selectedDocumentId, setSelectedDocumentId] = useState(null);
+
+  
   const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
 
   useEffect(() => {
@@ -195,6 +200,15 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
       alert(`Failed to save changes: ${err.message}`);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleRowClick = (documentId) => {
+    setSelectedDocumentId(documentId);
+  };
+  const handleViewDocument = (fileUrl, documentId) => {
+    if (onViewDocument) {
+      onViewDocument(fileUrl, documentId);
     }
   };
 
@@ -378,44 +392,84 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                     </tr>
                   </thead>
                   <tbody>
-                    {allDocuments.map((doc) => (
-                      <tr key={doc.OcrId} className="border-b dark:border-gray-700">
-                        <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
-                          {(isEditing || isEditingMultiple) ? (
-                            <input
-                              type="text"
-                              value={editedDocuments[doc.OcrId]?.fileName || doc.fileName}
-                              onChange={(e) => handleInputChange(doc.OcrId, 'fileName', e.target.value)}
-                              className="px-2 py-1 border rounded-md"
-                            />
-                          ) : (
-                            doc.fileName || 'Unnamed Document'
-                          )}
-                        </th>
-                        <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
-                        <td className="px-4 py-3">Uploaded Document</td>
-                        <td className="px-4 py-3"><a href="#" onClick={() => onViewDocument(doc.fileUrl, doc.OcrId)}>View</a></td>
-                        <td className="px-4 py-3"><a href="#" onClick={() => handleDownloadDocument(doc.fileUrl)}>Download</a></td>
-                        <td className="px-4 py-3">
-                          {(isEditing || isEditingMultiple) ? (
-                            <select
-                              value={editedDocuments[doc.OcrId]?.category || doc.category}
-                              onChange={(e) => handleInputChange(doc.OcrId, 'category', e.target.value)}
-                              className="px-2 py-1 border rounded-md"
-                            >
-                              {categories.map((cat, index) => (
-                                <option key={index} value={cat}>{cat}</option>
-                              ))}
-                            </select>
-                          ) : (
-                            doc.category || 'Uncategorized'
-                          )}
-                        </td>
-                        <td className="px-4 py-3"><a href="#" onClick={() => handleDeleteClick(doc.OcrId)}>Delete</a></td>
-                        <td className="px-4 py-3"><a href="#" onClick={() => handleSortDocuments(doc.OcrId)}>Sort</a></td>
-                      </tr>
-                    ))}
-                  </tbody>
+                {allDocuments.map((doc) => (
+                  <tr 
+                    key={doc.OcrId}
+                    className={`document-row ${selectedDocumentId === doc.OcrId ? 'document-row-selected' : ''}`}
+                    onClick={() => handleRowClick(doc.OcrId)}
+                    style={{
+                      transition: 'background-color 0.2s ease-in-out',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                      {(isEditing || isEditingMultiple) ? (
+                        <input
+                          type="text"
+                          value={editedDocuments[doc.OcrId]?.fileName || doc.fileName}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleInputChange(doc.OcrId, 'fileName', e.target.value);
+                          }}
+                          className="px-2 py-1 border rounded-md"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        doc.fileName || 'Unnamed Document'
+                      )}
+                    </th>
+                    <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
+                    <td className="px-4 py-3">Uploaded Document</td>
+                    <td className="px-4 py-3">
+                      <a href="#" onClick={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation(); 
+                        onViewDocument(doc.fileUrl, doc.OcrId); 
+                      }}>View</a>
+                    </td>
+                    <td className="px-4 py-3">
+                      <a href="#" onClick={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation(); 
+                        handleDownloadDocument(doc.fileUrl); 
+                      }}>Download</a>
+                    </td>
+                    <td className="px-4 py-3">
+                      {(isEditing || isEditingMultiple) ? (
+                        <select
+                          value={editedDocuments[doc.OcrId]?.category || doc.category}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleInputChange(doc.OcrId, 'category', e.target.value);
+                          }}
+                          className="px-2 py-1 border rounded-md"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {categories.map((cat, index) => (
+                            <option key={index} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      ) : (
+                        doc.category || 'Uncategorized'
+                      )}
+                    </td>
+                    <td className="px-4 py-3">
+                      <a href="#" onClick={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation(); 
+                        handleDeleteClick(doc.OcrId); 
+                      }}>Delete</a>
+                    </td>
+                    <td className="px-4 py-3">
+                      <a href="#" onClick={(e) => { 
+                        e.preventDefault();
+                        e.stopPropagation(); 
+                        handleSortDocuments(doc.OcrId); 
+                      }}>Sort</a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>s
                 </table>
               </div>
             </div>
