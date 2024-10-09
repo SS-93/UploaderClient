@@ -1,7 +1,47 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
+import { performNER } from './openaiservices'
 import ParkingSession from '../parkingsession/ParkingSession'
 
 function AiProcessor({ selectedOcrId, ocrText }) {
+  const [entities, setEntities] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    if (ocrText) {
+      setIsLoading(true);
+      performNER(ocrText)
+        .then(result => {
+          setEntities(result);
+          setIsLoading(false);
+        })
+        .catch(error => {
+          console.error('Error performing NER:', error);
+          setIsLoading(false);
+        });
+    } else {
+      setEntities(null);
+    }
+  }, [ocrText]);
+
+  const renderEntities = () => {
+    if (!entities) return null;
+
+    return (
+      <div>
+        {Object.entries(entities).map(([category, items]) => (
+          <div key={category} className="mb-4">
+            <h3 className="text-lg font-semibold capitalize">{category.replace('_', ' ')}</h3>
+            <ul className="list-disc pl-5">
+              {items.map((item, index) => (
+                <li key={index}>{item}</li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div>AiProcessor</div>
@@ -83,54 +123,18 @@ function AiProcessor({ selectedOcrId, ocrText }) {
               </div>
               {/* Second Card - EXTRACTED ENTITIES */}
               <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 md:p-12">
-                <a
-                  href="#"
-                  className="bg-purple-100 text-purple-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-md dark:bg-gray-700 dark:text-purple-400 mb-2"
-                >
-                  <svg
-                    className="w-2.5 h-2.5 me-1.5"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 20 16"
-                  >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M5 4 1 8l4 4m10-8 4 4-4 4M11 1 9 15"
-                    />
-                  </svg>
-                  OCR ID: {selectedOcrId || 'N/A'}
-                </a>
                 <h2 className="text-gray-900 dark:text-white text-3xl font-extrabold mb-2">
                   EXTRACTED ENTITIES
                 </h2>
-                <p className="text-lg font-normal text-gray-500 dark:text-gray-400 mb-4">
-                  Static websites are now used to bootstrap lots of websites and are becoming the basis for a variety of tools that even influence both web designers and developers.
-                </p>
-                <a
-                  href="#"
-                  className="text-blue-600 dark:text-blue-500 hover:underline font-medium text-lg inline-flex items-center"
-                >
-                  Read more
-                  <svg
-                    className="w-3.5 h-3.5 ms-2 rtl:rotate-180"
-                    aria-hidden="true"
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 14 10"
-                  >
-                    <path
-                      stroke="currentColor"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth="2"
-                      d="M1 5h12m0 0L9 1m4 4L9 9"
-                    />
-                  </svg>
-                </a>
+                <div className="text-lg font-normal text-gray-500 dark:text-gray-400 mb-4 max-h-60 overflow-y-auto">
+                  {isLoading ? (
+                    <p>Loading entities...</p>
+                  ) : entities ? (
+                    renderEntities()
+                  ) : (
+                    <p>No entities extracted yet</p>
+                  )}
+                </div>
               </div>
             </div>
           </div>
