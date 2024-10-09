@@ -5,7 +5,7 @@ import TextModule from '../../textmodule/TextModule';
 import './DashboardII.css'
 
 
-function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId }) {
+function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
   const [parkedDocuments, setParkedDocuments] = useState([]);
@@ -203,8 +203,10 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     }
   };
 
+
   const handleRowClick = (documentId) => {
     setSelectedDocumentId(documentId);
+    onSelectDocument(documentId); // Call the parent function to update OCR ID
   };
   const handleViewDocument = (fileUrl, documentId) => {
     if (onViewDocument) {
@@ -269,6 +271,8 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
       alert(`Failed to sort document: ${err.message}`);
     }
   };
+
+
 
   const handleDownloadDocument = async (fileUrl) => {
     try {
