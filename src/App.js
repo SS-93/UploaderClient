@@ -1,6 +1,8 @@
 // import logo from './logo.svg';
 import './App.css';
 import {BrowserRouter, Routes, Route, Switch } from 'react-router-dom';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 import Home from './components/home/Home';
 import AllClaims from './components/allclaims/AllClaims';

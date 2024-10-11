@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import AiProcessor from '../aiprocessor/AiProcessor'
 import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDashboard'
+import ParkingSession from '../parkingsession/ParkingSession';
+
 
 function AILab() {
   const [selectedOcrId, setSelectedOcrId] = useState(null);
@@ -37,7 +39,12 @@ function AILab() {
         onSelectDocument={handleSelectDocument}
         // ... other props
       />
-      
+       {/* <ParkingSession
+        onSelectDocument={handleSelectDocument}
+        selectedOcrId={selectedOcrId}
+        // ... other props
+      />
+       */}
     </div>
   )
 }

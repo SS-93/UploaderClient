@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import Tesseract from 'tesseract.js';
-import * as pdfjsLib from 'pdfjs-dist';
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.js`;
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
 function TextModule({ documentUrl, OcrId, textContent = '', onTextExtracted, onSaveOcrText }) {
   const [isLoading, setIsLoading] = useState(false);
@@ -10,6 +12,7 @@ function TextModule({ documentUrl, OcrId, textContent = '', onTextExtracted, onS
   const [progress, setProgress] = useState(0);
   const [message, setMessage] = useState('');
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [numPages, setNumPages] = useState(null);
 
   useEffect(() => {
     setOcrText(textContent);
@@ -53,7 +56,7 @@ function TextModule({ documentUrl, OcrId, textContent = '', onTextExtracted, onS
   const handlePdf = async (url) => {
     try {
       setIsLoading(true);
-      const loadingTask = pdfjsLib.getDocument(url);
+      const loadingTask = pdfjs.getDocument(url);
       const pdf = await loadingTask.promise;
       const numPages = pdf.numPages;
       let combinedText = '';

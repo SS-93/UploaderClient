@@ -1,6 +1,14 @@
 import React, {useState, useEffect} from 'react'
 import DocViewer, { DocViewerRenderers} from "@cyntler/react-doc-viewer"
 
+import { Document, Page, pdfjs } from 'react-pdf';
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+import 'react-pdf/dist/esm/Page/TextLayer.css';
+import './react-pdf.css'
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
+
+
 function DocumentViewer({ documentUrl, onClose}) {
     const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
