@@ -6,7 +6,7 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-function TextModule({ documentUrl, OcrId, textContent = '', onTextExtracted, onSaveOcrText }) {
+function TextModule({ documentUrl, OcrId, textContent = '',  onSaveOcrText, onTextExtracted = () => {} }) {
   const [isLoading, setIsLoading] = useState(false);
   const [ocrText, setOcrText] = useState(textContent);
   const [progress, setProgress] = useState(0);
@@ -96,13 +96,34 @@ function TextModule({ documentUrl, OcrId, textContent = '', onTextExtracted, onS
     }
   };
 
+  // const handleSubmit = async (event) => {
+  //   event.preventDefault();
+  //   if (!OcrId) {
+  //     setMessage('OcrId is required to update text content.');
+  //     return;
+  //   }
+
+  //   try {
+  //     await onSaveOcrText(OcrId, ocrText);
+  //     setSaveSuccess(true);
+  //     setMessage('OCR text saved successfully');
+  //     setTimeout(() => {
+  //       setSaveSuccess(false);
+  //       setMessage('');
+  //     }, 3000); // Clear message after 3 seconds
+  //   } catch (error) {
+  //     setMessage('Failed to save OCR text');
+  //     console.error('Error saving OCR text:', error);
+  //   }
+  // };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
+    console.log('TextModule - Submitting with OcrId:', OcrId);
     if (!OcrId) {
       setMessage('OcrId is required to update text content.');
       return;
     }
-
     try {
       await onSaveOcrText(OcrId, ocrText);
       setSaveSuccess(true);
@@ -110,7 +131,7 @@ function TextModule({ documentUrl, OcrId, textContent = '', onTextExtracted, onS
       setTimeout(() => {
         setSaveSuccess(false);
         setMessage('');
-      }, 3000); // Clear message after 3 seconds
+      }, 3000);
     } catch (error) {
       setMessage('Failed to save OCR text');
       console.error('Error saving OCR text:', error);
