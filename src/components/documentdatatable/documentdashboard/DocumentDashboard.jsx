@@ -214,27 +214,38 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     }
   };
 
-  const handleDeleteClick = (OcrId) => {
-    setDocumentToDelete(OcrId);
+  const handleDeleteClick = (document) => {
+    console.log('Document to delete:', document);
+    setDocumentToDelete(document.OcrId);
     setShowModal(true);
   };
 
   const handleConfirmDelete = async () => {
+    if (!documentToDelete) {
+      console.error('No document selected for deletion');
+      alert('No document selected for deletion');
+      return;
+    }
+
     try {
       setLoading(true);
-      const response = await (`http://localhost:4000/dms/documents/${documentToDelete}`, {
+      const response = await fetch(`http://localhost:4000/dms/documents/${documentToDelete}`, {
         method: 'DELETE',
       });
 
-      if (response.ok) {
-        fetchNewlyUploadedDocuments();
-        if (parkId) fetchParkedDocuments();
-        if (parkSessionId) fetchParkingSessionDocuments();
-        setShowModal(false);
-        setDocumentToDelete(null);
-      } else {
-        throw new Error('Failed to delete document');
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to delete document');
       }
+
+      const result = await response.json();
+      console.log(result.message); // Log the success message
+      
+      // Update the documents state to remove the deleted document
+      setDocuments(prevDocuments => prevDocuments.filter(doc => doc.OcrId !== documentToDelete));
+      
+      setShowModal(false);
+      setDocumentToDelete(null);
     } catch (error) {
       console.error('Error deleting document:', error);
       alert(`Failed to delete document: ${error.message}`);
@@ -461,7 +472,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                       <a href="#" onClick={(e) => { 
                         e.preventDefault();
                         e.stopPropagation(); 
-                        handleDeleteClick(doc.OcrId); 
+                        handleDeleteClick(doc); 
                       }}>Delete</a>
                     </td>
                     <td className="px-4 py-3">
