@@ -6,7 +6,7 @@ import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.min.js`;
 
-function TextModule({ documentUrl, OcrId, textContent = '',  onSaveOcrText, onTextExtracted = () => {} }) {
+function TextModule({ documentUrl, OcrId, textContent = '', onSaveOcrText, onTextExtracted = () => {} }) {
   const [isLoading, setIsLoading] = useState(false);
   const [ocrText, setOcrText] = useState(textContent);
   const [progress, setProgress] = useState(0);
@@ -95,27 +95,6 @@ function TextModule({ documentUrl, OcrId, textContent = '',  onSaveOcrText, onTe
       setIsLoading(false);
     }
   };
-
-  // const handleSubmit = async (event) => {
-  //   event.preventDefault();
-  //   if (!OcrId) {
-  //     setMessage('OcrId is required to update text content.');
-  //     return;
-  //   }
-
-  //   try {
-  //     await onSaveOcrText(OcrId, ocrText);
-  //     setSaveSuccess(true);
-  //     setMessage('OCR text saved successfully');
-  //     setTimeout(() => {
-  //       setSaveSuccess(false);
-  //       setMessage('');
-  //     }, 3000); // Clear message after 3 seconds
-  //   } catch (error) {
-  //     setMessage('Failed to save OCR text');
-  //     console.error('Error saving OCR text:', error);
-  //   }
-  // };
 
   const handleSubmit = async (event) => {
     event.preventDefault();

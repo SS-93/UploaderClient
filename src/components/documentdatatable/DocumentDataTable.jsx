@@ -454,7 +454,7 @@ const [documentToDelete, setDocumentToDelete] = useState(null);
       <td className="px-4 py-3">{new Date(doc.uploadDate).toLocaleDateString()}</td>
       <td className="px-4 py-3">Uploaded Document</td>
       <td className="px-4 py-3">
-        <a href="#" onClick={(e) => { e.stopPropagation(); handleViewDocument(doc.fileUrl, doc._id); }}>View</a>
+        <a href="#" onClick={(e) => { e.preventDefault(); onViewDocument(doc.fileUrl, doc._id); }}>View</a>
       </td>
       <td className="px-4 py-3">
         <a href="#" onClick={(e) => { e.stopPropagation(); handleDownloadDocument(doc.fileUrl); }}>Download</a>

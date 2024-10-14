@@ -10,7 +10,8 @@ function ClaimProfile() {
   const [claim, setClaim] = useState(null);
   const [selectedDocumentUrl, setSelectedDocumentUrl] = useState("");
   const [ocrText, setOcrText] = useState("");
-
+  const [selectedDocumentId, setSelectedDocumentId] = useState(null);
+  const [selectedOcrId, setSelectedOcrId] = useState(null);
 
   useEffect(() => {
     const fetchClaim = async () => {
@@ -35,17 +36,49 @@ function ClaimProfile() {
     setSelectedDocumentUrl("");
   };
 
+  const handleViewDocument = async (fileUrl, documentId) => {
+    setSelectedDocumentUrl(fileUrl);
+    setSelectedDocumentId(documentId);
+
+    try {
+      const response = await fetch(`http://localhost:4000/new/claims/${claimId}/documents/${documentId}/ocrId`);
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      const data = await response.json();
+      setSelectedOcrId(data.OcrId);
+    } catch (error) {
+      console.error('Error fetching OcrId:', error);
+    }
+  };
+
+  const handleReadDocument = (text) => {
+    setOcrText(text);
+  };
+
+  const handleSaveOcrText = async (OcrId, text) => {
+    try {
+      const response = await fetch(`http://localhost:4000/new/ocr-text/${OcrId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const result = await response.json();
+      console.log(result.message);
+    } catch (error) {
+      console.error('Error saving OCR text:', error);
+    }
+  };
+
   if (!claim) {
     return <div>Loading...</div>;
-  }
-
-  const handleReadDocument =(text) => {
-    setOcrText(text);
-
-  }
-
-  if (!claim) {
-    return <div>Loading...</div>
   }
 
   return (
@@ -65,13 +98,17 @@ function ClaimProfile() {
           />
         </div>
         <div className=" ">
-          <TextModule text={ocrText} 
-          documentUrl = {selectedDocumentUrl} />
+          <TextModule 
+            text={ocrText} 
+            documentUrl={selectedDocumentUrl}
+            OcrId={selectedOcrId}
+            onSaveOcrText={handleSaveOcrText}
+          />
         </div>
         <div className="">
           <DocumentDataTable
             claimId={claim._id}
-            onViewDocument={setSelectedDocumentUrl}
+            onViewDocument={handleViewDocument}
             onReadDocument={handleReadDocument}
           />
         </div>
