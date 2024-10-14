@@ -10,6 +10,7 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
   const [isFileSelected, setIsFileSelected] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState('');
   const [category, setCategory] = useState('');
+  const [categorie, setCategorie] = useState({});
   const [showBulkUpload, setShowBulkUpload] = useState(false);
   const [fileNames, setFileNames] = useState({});
   const [isEditing, setIsEditing] = useState(false);
@@ -19,7 +20,7 @@ function DocumentDataTable({ claimId, onViewDocument, onReadDocument }) {
   const [showLoadingBar, setShowLoadingBar] = useState(false); // State to manage loading bar
   const [showModal, setShowModal] = useState(false);
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
-
+  const [fileCategories, setFileCategories] = useState({});
 
 
 const [documentToDelete, setDocumentToDelete] = useState(null);
@@ -87,60 +88,61 @@ const [documentToDelete, setDocumentToDelete] = useState(null);
     }
   };
 
+  const handleCategoryChange = (fileName, selectedCategory) => {
+    setFileCategories(prev => ({ ...prev, [fileName]: selectedCategory }));
+  };
+
+  const onBulkUploadSubmit = async (e) => {
+    e.preventDefault();
+    const formData = new FormData();
+
+    files.forEach((file) => {
+        formData.append('documents', file);
+        formData.append('fileNames', fileNames[file.name] || file.name);
+        formData.append('categories', fileCategories[file.name] || category || 'Correspondence General');
+    });
+
+    try {
+        setShowLoadingBar(true);
+
+        const res = await fetch(`http://localhost:4000/new/claims/${claimId}/documents/bulk-upload`, {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (res.ok) {
+            const result = await res.json();
+            console.log('Bulk upload successful:', result);
+            await fetchDocuments(); // Reload the document data
+            setFiles([]);
+            setFileNames({});
+            setFileCategories({});
+            setShowBulkUpload(false);
+        } else {
+            const errorData = await res.json();
+            console.error('Bulk upload failed:', errorData);
+            alert(`Failed to upload files: ${errorData.error}`);
+        }
+    } catch (err) {
+        console.error('Error during bulk upload:', err);
+        alert('Error uploading files');
+    } finally {
+        setShowLoadingBar(false);
+    }
+  };
+
   const onBulkFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
     setFiles(selectedFiles);
 
     const initialFileNames = {};
     selectedFiles.forEach(file => {
-      initialFileNames[file.name] = file.name; // Initialize with original filenames
+      initialFileNames[file.name] = file.name;
     });
     setFileNames(initialFileNames);
   };
 
-  const onBulkUploadSubmit = async (e) => {
-    e.preventDefault();
-    const formData = new FormData();
-    // Log file names before appending to formData
-    console.log('Files to be uploaded:', files.map(file => file.name));
-
-    files.forEach(file => {
-      formData.append('documents', file);
-    });
-    formData.append('category', category);
-
-    try {
-      setShowLoadingBar(true);
-      // Update the route to use the claims endpoint for bulk upload
-      const res = await fetch(`http://localhost:4000/new/claims/${claimId}/bulk-upload`, {
-        method: 'POST',
-        body: formData,
-      });
-
-      // const res = await fetch(`http://localhost:4000/dms/bulk-upload` , {
-      //   method: 'POST',
-      //   body: formData,
-      // });
-
-      if (res.ok) {
-        const result = await res.json();
-        console.log('Bulk upload successful:', result);
-
-        setTimeout(() => {
-          setShowLoadingBar(false);
-          fetchDocuments();
-        }, 80);
-
-      } else {
-        const errorData = await res.json();
-        console.error('Bulk upload failed:', errorData);
-        setShowLoadingBar(false);
-      }
-    } catch (err) {
-      console.error('Error during bulk upload:', err);
-      setShowLoadingBar(false);
-    }
-  };
+          <LoadingBar /> // Display the loading bar
 
   const handleViewDocument = (fileUrl, documentId) => {
     setSelectedDocumentId(documentId);
@@ -365,6 +367,17 @@ const [documentToDelete, setDocumentToDelete] = useState(null);
                       required
                       className="block w-full text-sm text-gray-900 border border-gray-300 rounded-lg cursor-pointer bg-gray-50 dark:text-gray-400 dark:bg-gray-700 dark:border-gray-600 focus:outline-none"
                     />
+                    {/* <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="mt-2 bg-gray-50 border border-gray-300 text-slate-600 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-3 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
+                      required
+                    >
+                      <option value="">Select Default Category</option>
+                      {categories.map((cat, index) => (
+                        <option key={index} value={cat}>{cat}</option>
+                      ))}
+                    </select> */}
                     {files.map(file => (
                       <div key={file.name} className="flex items-center space-x-3 mt-2">
                         <input
@@ -378,19 +391,19 @@ const [documentToDelete, setDocumentToDelete] = useState(null);
                           className="px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-200"
                           required
                         />
+                        <select
+                          value={fileCategories[file.name] || category}
+                          onChange={(e) => handleCategoryChange(file.name, e.target.value)}
+                          className="px-3 py-2 border border-gray-400 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-200"
+                        > 
+                          <option value="" disabled>Select Category</option>
+                       
+                          {categories.map((cat, index) => (
+                            <option key={index} value={cat}>{cat}</option>
+                          ))}
+                        </select>
                       </div>
                     ))}
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="mt-2 bg-gray-50 border border-gray-300 text-slate-600 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-3 p-2 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-primary-500 dark:focus:border-primary-500"
-                      required
-                    >
-                      <option value="">Select Category</option>
-                      {categories.map((cat, index) => (
-                        <option key={index} value={cat}>{cat}</option>
-                      ))}
-                    </select>
                     <button
                       type="submit"
                       className="mt-2 w-full text-white bg-green-600 hover:bg-green-300 focus:ring-4 focus:ring-green-200 font-medium rounded-lg text-sm px-4 py-2"
