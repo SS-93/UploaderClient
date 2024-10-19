@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { performNER } from './openaiservices'
-import ParkingSession from '../parkingsession/ParkingSession'
+import AllClaims from '../allclaims/AllClaims';
 
 function AiProcessor({ selectedOcrId, ocrText }) {
   const [entities, setEntities] = useState(null);
+  const [editableEntities, setEditableEntities] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     if (ocrText) {
@@ -12,6 +14,7 @@ function AiProcessor({ selectedOcrId, ocrText }) {
       performNER(ocrText)
         .then(result => {
           setEntities(result);
+          setEditableEntities(result);
           setIsLoading(false);
         })
         .catch(error => {
@@ -20,26 +23,102 @@ function AiProcessor({ selectedOcrId, ocrText }) {
         });
     } else {
       setEntities(null);
+      setEditableEntities(null);
     }
   }, [ocrText]);
 
+  useEffect(() => {
+    if (entities) {
+      setEditableEntities({
+        potentialClaimNumbers: entities.potentialClaimNumbers || [],
+        potentialClaimantNames: entities.potentialClaimantNames || [],
+        potentialEmployerNames: entities.potentialEmployerNames || [],
+        potentialInsurerNames: entities.potentialInsurerNames || [],
+        potentialMedicalProviderNames: entities.potentialMedicalProviderNames || [],
+        potentialPhysicianNames: entities.potentialPhysicianNames || [],
+        potentialDatesOfBirth: entities.potentialDatesOfBirth || [],
+        potentialDatesOfInjury: entities.potentialDatesOfInjury || [],
+        potentialInjuryDescriptions: entities.potentialInjuryDescriptions || []
+      });
+    }
+  }, [entities]);
+
   const renderEntities = () => {
-    if (!entities) return null;
+    if (!editableEntities) return null;
 
     return (
       <div>
-        {Object.entries(entities).map(([category, items]) => (
+        {Object.entries(editableEntities).map(([category, items]) => (
           <div key={category} className="mb-4">
             <h3 className="text-lg font-semibold capitalize">{category.replace('_', ' ')}</h3>
             <ul className="list-disc pl-5">
               {items.map((item, index) => (
-                <li key={index}>{item}</li>
+                <li key={index}>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={item}
+                      onChange={(e) => handleEntityChange(category, index, e.target.value)}
+                      className="border border-gray-300 rounded px-2 py-1 w-full"
+                    />
+                  ) : (
+                    item
+                  )}
+                </li>
               ))}
             </ul>
           </div>
         ))}
       </div>
     );
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+  };
+
+  const handleSave = async () => {
+    try {
+      console.log('Sending entities:', editableEntities);  // Add this line
+      const response = await fetch('http://localhost:4000/ai/save-entities', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          OcrId: selectedOcrId,
+          updatedEntities: editableEntities
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to save updated entities');
+      }
+
+      const result = await response.json();
+      setEntities(editableEntities);
+      setIsEditing(false);
+      console.log('Entities updated successfully:', result.message);
+    } catch (error) {
+      console.error('Error saving updated entities:', error);
+      alert('Failed to save updated entities');
+    }
+  };
+
+  const handleCancel = () => {
+    setEditableEntities(entities);
+    setIsEditing(false);
+  };
+
+  const handleEntityChange = (category, index, value) => {
+    setEditableEntities(prev => {
+      const newEntities = {
+        ...prev,
+        [category]: prev[category].map((item, i) => i === index ? value : item)
+      };
+      console.log('Updated entities:', newEntities);  // Add this line
+      return newEntities;
+    });
   };
 
   return (
@@ -67,6 +146,7 @@ function AiProcessor({ selectedOcrId, ocrText }) {
               <h1 className="text-gray-900 dark:text-white text-3xl md:text-5xl font-extrabold mb-2">
                 Potential Claim Matches
               </h1>
+              <AllClaims/>  
               <p className="text-lg font-normal text-gray-500 dark:text-gray-400 mb-6">
                 Selected Document OCR ID: {selectedOcrId || 'No document selected'}
               </p>
@@ -129,8 +209,20 @@ function AiProcessor({ selectedOcrId, ocrText }) {
                 <div className="text-lg font-normal text-gray-500 dark:text-gray-400 mb-4 max-h-60 overflow-y-auto">
                   {isLoading ? (
                     <p>Loading entities...</p>
-                  ) : entities ? (
-                    renderEntities()
+                  ) : editableEntities ? (
+                    <>
+                      {renderEntities()}
+                      <div className="mt-4">
+                        {isEditing ? (
+                          <>
+                            <button onClick={handleSave} className="bg-green-500 text-white px-4 py-2 rounded mr-2">Save</button>
+                            <button onClick={handleCancel} className="bg-red-500 text-white px-4 py-2 rounded">Cancel</button>
+                          </>
+                        ) : (
+                          <button onClick={handleEdit} className="bg-blue-500 text-white px-4 py-2 rounded">Edit</button>
+                        )}
+                      </div>
+                    </>
                   ) : (
                     <p>No entities extracted yet</p>
                   )}
