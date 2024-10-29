@@ -4,7 +4,6 @@ import DocumentViewer from '../../documentviewer/DocumentViewer';
 import TextModule from '../../textmodule/TextModule';
 import './DashboardII.css'
 
-
 function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
@@ -208,6 +207,12 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     setSelectedDocumentId(documentId);
     onSelectDocument(documentId); // Call the parent function to update OCR ID
   };
+
+  const handleRowClickII = (document) => {
+    setSelectedDocumentId(document.OcrId);
+    onSelectDocument(document); // Pass the entire document object
+  };
+
   const handleViewDocument = (fileUrl, documentId) => {
     if (onViewDocument) {
       onViewDocument(fileUrl, documentId);
@@ -411,7 +416,8 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                   <tr 
                     key={doc.OcrId}
                     className={`document-row ${selectedDocumentId === doc.OcrId ? 'document-row-selected' : ''}`}
-                    onClick={() => handleRowClick(doc.OcrId)}
+                    // onClick={() => handleRowClick(doc.OcrId)}
+                    onClick={() => handleRowClickII(doc)}
                     style={{
                       transition: 'background-color 0.2s ease-in-out',
                       cursor: 'pointer'

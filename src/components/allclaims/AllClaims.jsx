@@ -2,7 +2,8 @@ import {React, useState, useEffect} from 'react'
 import { Link, useParams } from 'react-router-dom';
 import Sidebar from '../claimprofile/Sidebar';
 import { useClaimContext } from '../claimcontext/ClaimContext';
-
+import SuggestedClaims from './SuggestedClaims';
+import { claimIndexer } from '../../utils/claimIndexer';  
 
 
 function AllClaims() {
@@ -15,7 +16,7 @@ function AllClaims() {
     const [currentClaimNumber, setCurrentClaimNumber] = useState('');
     const [currentClaimId, setCurrentClaimId] = useState ('');
     const [loading, setLoading] = useState (null);
-
+    const [indexedClaims, setIndexedClaims] = useState([]);
     const {claimId} = useParams();
     
     useEffect(() => {
@@ -44,6 +45,12 @@ function AllClaims() {
                 if (response.ok) {
                     const data = await response.json ();
                     setClaimsData(data);
+                    
+                    // Index the claims when we receive them
+                    claimIndexer.indexClaims(data.getAllClaims);
+                     // Index the claims and store them
+        const indexed = claimIndexer.indexClaims(data.getAllClaims);
+        setIndexedClaims(Array.from(indexed.values()));
 
                 } else {
                     console.error ('Failed to fetch claims data')
@@ -60,6 +67,16 @@ function AllClaims() {
       setCurrentClaimId(claim._id);
     };
 
+    const handleClaimSort = async (claimId) => {
+      // Implement sorting logic here
+      try {
+        // API call to sort document to claim
+        console.log(`Sorting document to claim: ${claimId}`);
+      } catch (error) {
+        console.error('Error sorting document:', error);
+      }
+    };
+  
     
 
   return (
@@ -121,6 +138,11 @@ All Claims
           ))} */}
 
 {selectedClaim && <Sidebar claimId={currentClaimId} />}
+
+<SuggestedClaims 
+        indexedClaims={indexedClaims}
+        onClaimSelect={handleClaimSort}
+      />
 </div> 
 
   )}
