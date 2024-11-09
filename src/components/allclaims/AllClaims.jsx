@@ -139,10 +139,10 @@ All Claims
 
 {selectedClaim && <Sidebar claimId={currentClaimId} />}
 
-<SuggestedClaims 
+{/* <SuggestedClaims 
         indexedClaims={indexedClaims}
         onClaimSelect={handleClaimSort}
-      />
+      /> */}
 </div> 
 
   )}
