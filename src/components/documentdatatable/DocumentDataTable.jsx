@@ -48,9 +48,12 @@ const [documentToDelete, setDocumentToDelete] = useState(null);
 
   const onFileChange = (e) => {
     const selectedFile = e.target.files[0];
-    setFile(selectedFile);
-    setFileName(selectedFile.name);
-    setIsFileSelected(true);
+    if (selectedFile) {
+      setFile(selectedFile);
+      setFileName(selectedFile.name);
+      setIsFileSelected(true);
+      console.log('Selected file:', selectedFile); // Debug log
+    }
   };
 
   const onFileNameChange = (e) => {
@@ -63,28 +66,30 @@ const [documentToDelete, setDocumentToDelete] = useState(null);
     formData.append('document', file);
     formData.append('fileName', fileName);
     formData.append('category', category);
-    formData.append('claimId', claimId);
 
     try {
-      setLoading(true); // Start loading
+      setLoading(true);
       const res = await fetch(`http://localhost:4000/new/claims/${claimId}/documents`, {
         method: 'POST',
         body: formData,
       });
 
-      if (res.ok) {
-        await fetchDocuments(); // Refresh the document list after upload
-        setIsFileSelected(false); // Reset file selection
-        setFile(null);
-        setFileName(''); // Reset file name input
-        setCategory('');
-      } else {
-        console.error('Upload failed');
+      if (!res.ok) {
+        throw new Error('Upload failed');
       }
+
+      const data = await res.json();
+      console.log('Upload response:', data); // Log the response to see the OcrId
+
+      await fetchDocuments();
+      setIsFileSelected(false);
+      setFile(null);
+      setFileName('');
+      setCategory('');
     } catch (err) {
-      console.error(err);
+      console.error('Upload error:', err);
     } finally {
-      setLoading(false); // End loading
+      setLoading(false);
     }
   };
 
@@ -96,38 +101,49 @@ const [documentToDelete, setDocumentToDelete] = useState(null);
     e.preventDefault();
     const formData = new FormData();
 
-    files.forEach((file) => {
-        formData.append('documents', file);
-        formData.append('fileNames', fileNames[file.name] || file.name);
-        formData.append('categories', fileCategories[file.name] || category || 'Correspondence General');
+    // Properly format the arrays for backend processing
+    const fileNamesArray = [];
+    const categoriesArray = [];
+
+    files.forEach((file, index) => {
+      formData.append('documents', file);
+      // Store the custom filename or use original filename
+      const customFileName = fileNames[file.name] || file.name;
+      fileNamesArray.push(customFileName);
+      // Store the category or use default
+      const category = fileCategories[file.name] || 'Uncategorized';
+      categoriesArray.push(category);
     });
 
+    // Append the arrays as strings
+    formData.append('fileNames', fileNamesArray.join('|'));
+    formData.append('categories', categoriesArray.join('|'));
+
     try {
-        setShowLoadingBar(true);
+      setShowLoadingBar(true);
+      const res = await fetch(`http://localhost:4000/new/claims/${claimId}/documents/bulk`, {
+        method: 'POST',
+        body: formData,
+      });
 
-        const res = await fetch(`http://localhost:4000/new/claims/${claimId}/documents/bulk-upload`, {
-            method: 'POST',
-            body: formData,
-        });
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Bulk upload failed');
+      }
 
-        if (res.ok) {
-            const result = await res.json();
-            console.log('Bulk upload successful:', result);
-            await fetchDocuments(); // Reload the document data
-            setFiles([]);
-            setFileNames({});
-            setFileCategories({});
-            setShowBulkUpload(false);
-        } else {
-            const errorData = await res.json();
-            console.error('Bulk upload failed:', errorData);
-            alert(`Failed to upload files: ${errorData.error}`);
-        }
+      const result = await res.json();
+      console.log('Bulk upload successful:', result);
+      
+      await fetchDocuments();
+      setFiles([]);
+      setFileNames({});
+      setFileCategories({});
+      setShowBulkUpload(false);
     } catch (err) {
-        console.error('Error during bulk upload:', err);
-        alert('Error uploading files');
+      console.error('Bulk upload error:', err);
+      alert(err.message);
     } finally {
-        setShowLoadingBar(false);
+      setShowLoadingBar(false);
     }
   };
 
@@ -136,10 +152,16 @@ const [documentToDelete, setDocumentToDelete] = useState(null);
     setFiles(selectedFiles);
 
     const initialFileNames = {};
+    const initialCategories = {};
+    
     selectedFiles.forEach(file => {
       initialFileNames[file.name] = file.name;
+      initialCategories[file.name] = 'Uncategorized';
     });
+    
     setFileNames(initialFileNames);
+    setFileCategories(initialCategories);
+    console.log('Selected files:', selectedFiles); // Debug log
   };
 
           <LoadingBar /> // Display the loading bar

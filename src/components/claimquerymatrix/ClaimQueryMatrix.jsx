@@ -1,13 +1,40 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 
+const getCategoryColor = (category) => {
+  const categories = {
+    'Medical': 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300',
+    'Legal': 'bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-300',
+    'Insurance': 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300',
+    'Financial': 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-300',
+    'Personal': 'bg-pink-100 text-pink-800 dark:bg-pink-900 dark:text-pink-300',
+    'Uncategorized': 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-300'
+  };
+  return categories[category] || categories['Uncategorized'];
+};
+
 const ClaimQueryMatrix = () => {
   const [claims, setClaims] = useState([]);
+  const [filteredClaims, setFilteredClaims] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filteredClaims, setFilteredClaims] = useState([]);
-
+  const [isAdvancedSearch, setIsAdvancedSearch] = useState(false);
+  const [expandedClaimId, setExpandedClaimId] = useState(null);
+  const [claimDocuments, setClaimDocuments] = useState([]);
+  const [loadingDocuments, setLoadingDocuments] = useState(false);
+  const [documentSearchTerm, setDocumentSearchTerm] = useState('');
+  const [documentSearchResults, setDocumentSearchResults] = useState([]);
+  const [documentSearchLoading, setDocumentSearchLoading] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+
+  // Add search operators helper
+  const searchOperators = {
+    claim: 'claim:',
+    adj: 'adj:',
+    doc: 'doc:',
+    name: 'name:',
+    date: 'date:'
+  };
 
   useEffect(() => {
     getMatrixClaims();
@@ -28,8 +55,51 @@ const ClaimQueryMatrix = () => {
     setFilteredClaims(searchResults);
   }, [searchTerm, claims]);
 
-  const handleSearch = (e) => {
-    setSearchTerm(e.target.value);
+  // Enhanced search function
+  const handleSearch = async (query) => {
+    try {
+      // Check if query contains any operators
+      const hasOperators = Object.values(searchOperators).some(op => query.includes(op));
+      setIsAdvancedSearch(hasOperators);
+
+      if (hasOperators || query.length >= 3) { // Only trigger advanced search if operators or 3+ chars
+        setLoading(true);
+        const response = await fetch(`http://localhost:4000/new/search?query=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        
+        // Transform results to include matching documents
+        const processedResults = data.results.map(claim => ({
+          ...claim,
+          hasMatches: claim.matchingDocuments?.length > 0,
+          matchCount: claim.matchingDocuments?.length || 0
+        }));
+        
+        setFilteredClaims(processedResults);
+      } else {
+        // Use simple filter for basic searches
+        const filtered = claims.filter(claim =>
+          claim.claimnumber?.toLowerCase().includes(query.toLowerCase()) ||
+          claim.name?.toLowerCase().includes(query.toLowerCase()) ||
+          claim.adjuster?.toLowerCase().includes(query.toLowerCase())
+        );
+        setFilteredClaims(filtered);
+      }
+    } catch (error) {
+      console.error('Search error:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Highlight matching text
+  const highlightText = (text, query) => {
+    if (!query || !text) return text;
+    const regex = new RegExp(`(${query})`, 'gi');
+    return text.split(regex).map((part, i) => 
+      regex.test(part) ? (
+        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800">{part}</mark>
+      ) : part
+    );
   };
 
   async function getMatrixClaims() {
@@ -53,90 +123,261 @@ const ClaimQueryMatrix = () => {
     }
   }
 
+  const fetchClaimDocuments = async (claimId) => {
+    if (!claimId) return;
+    
+    try {
+      setLoadingDocuments(true);
+      const response = await fetch(`http://localhost:4000/new/claims/${claimId}/documents`);
+      if (!response.ok) throw new Error('Failed to fetch documents');
+      
+      const data = await response.json();
+      setClaimDocuments(data);
+    } catch (error) {
+      console.error('Error fetching documents:', error);
+    } finally {
+      setLoadingDocuments(false);
+    }
+  };
+
+  const handleRowClick = async (claimId) => {
+    if (expandedClaimId === claimId) {
+      setExpandedClaimId(null);
+      setClaimDocuments([]);
+      setDocumentSearchTerm('');
+      setDocumentSearchResults([]);
+    } else {
+      setExpandedClaimId(claimId);
+      await fetchClaimDocuments(claimId);
+    }
+  };
+
+  const handleDownload = async (fileUrl, fileName) => {
+    try {
+      const response = await fetch(fileUrl);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+    } catch (error) {
+      console.error('Download error:', error);
+    }
+  };
+
+  const handleDocumentSearch = async (claimId, searchTerm) => {
+    if (!searchTerm.trim()) {
+      setDocumentSearchResults([]);
+      return;
+    }
+
+    setDocumentSearchLoading(true);
+    try {
+      const response = await fetch(
+        `http://localhost:4000/new/claims/${claimId}/documents/search?query=${encodeURIComponent(searchTerm)}`
+      );
+      
+      if (!response.ok) throw new Error('Document search failed');
+      
+      const data = await response.json();
+      setDocumentSearchResults(data.results);
+    } catch (error) {
+      console.error('Document search error:', error);
+    } finally {
+      setDocumentSearchLoading(false);
+    }
+  };
+
+  const toggleFilter = () => setFilterOpen(!filterOpen);
+
   return (
-    <section className="bg-gray-50 dark:bg-gray-900 p-3 sm:p-5">
-      <div className="mx-auto max-w-screen-xl px-4 lg:px-12">
-        <div className="bg-white dark:bg-gray-800 relative shadow-md sm:rounded-lg overflow-hidden">
-          <div className="flex flex-col md:flex-row items-center justify-between space-y-3 md:space-y-0 md:space-x-4 p-4">
-            <div className="w-full md:w-1/2">
-              <form className="flex items-center">
-                <label htmlFor="simple-search" className="sr-only">Search</label>
-                <div className="relative w-full">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" />
+    <section className="container mx-auto p-6">
+      <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
+        <div className="p-4 border-b dark:border-gray-700">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-1 relative">
+              <input
+                type="text"
+                className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                placeholder="Search claims..."
+                value={searchTerm}
+                onChange={(e) => {
+                  setSearchTerm(e.target.value);
+                  handleSearch(e.target.value);
+                }}
+              />
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+              </div>
+            </div>
+            
+            <button
+              onClick={toggleFilter}
+              className="px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center gap-2 hover:bg-gray-200 dark:hover:bg-gray-600"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+              </svg>
+              Filter
+            </button>
+          </div>
+        </div>
+
+        <div className="relative overflow-x-auto">
+          <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+            <thead className="text-xs text-gray-200 uppercase bg-slate-900 dark:bg-gray-700 dark:text-gray-400">
+              <tr>
+                <th scope="col" className="px-6 py-3">Claim Number</th>
+                <th scope="col" className="px-6 py-3">Name</th>
+                <th scope="col" className="px-6 py-3">Date</th>
+                <th scope="col" className="px-6 py-3">Adjuster</th>
+                <th scope="col" className="px-6 py-3">
+                  <div className="flex items-center space-x-1">
+                    <span>Document Search</span>
+                    <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
-                  <input
-                    type="text"
-                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-primary-500 focus:border-primary-500 block w-full pl-10 p-2"
-                    placeholder="Search claims"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-              </form>
-            </div>
-            <div className="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
-              <button className="flex items-center justify-center text-white bg-primary-700 hover:bg-primary-800 focus:ring-4 focus:ring-primary-300 font-medium rounded-lg text-sm px-4 py-2">
-                <svg className="h-3.5 w-3.5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z" />
-                </svg>
-                Add Claim
-              </button>
-              <button
-                onClick={() => setFilterOpen(!filterOpen)}
-                className="w-full md:w-auto flex items-center justify-center py-2 px-4 text-sm font-medium text-gray-900 bg-white rounded-lg border border-gray-200 hover:bg-gray-100"
-              >
-                <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M3 3a1 1 0 011-1h12a1 1 0 011 1v3a1 1 0 01-.293.707L12 11.414V15a1 1 0 01-.293.707l-2 2A1 1 0 018 17v-5.586L3.293 6.707A1 1 0 013 6V3z" />
-                </svg>
-                Filter
-              </button>
-            </div>
-          </div>
-
-          <div className="relative overflow-x-auto">
-            <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
-              <thead className="text-xs text-gray-200 uppercase bg-slate-900 dark:bg-gray-700 dark:text-gray-400">
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
                 <tr>
-                  <th scope="col" className="px-6 py-3">Claim Number</th>
-                  <th scope="col" className="px-6 py-3">Name</th>
-                  <th scope="col" className="px-6 py-3">Date</th>
-                  <th scope="col" className="px-6 py-3">Adjuster</th>
+                  <td colSpan="4" className="text-center py-4">Loading...</td>
                 </tr>
-              </thead>
-              <tbody>
-                {loading ? (
-                  <tr>
-                    <td colSpan="4" className="text-center py-4">Loading...</td>
-                  </tr>
-                ) : filteredClaims.length === 0 ? (
-                  <tr>
-                    <td colSpan="4" className="text-center py-4">
-                      {searchTerm ? 'No matching claims found' : 'No claims available'}
-                    </td>
-                  </tr>
-                ) : (
-                  filteredClaims.map((claim) => (
+              ) : filteredClaims.length === 0 ? (
+                <tr>
+                  <td colSpan="4" className="text-center py-4">
+                    {searchTerm ? 'No matching claims found' : 'No claims available'}
+                  </td>
+                </tr>
+              ) : (
+                filteredClaims.map((claim) => (
+                  <React.Fragment key={claim._id}>
                     <tr 
-                      key={claim._id} 
-                      className="bg-stone-600 border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-700"
+                      onClick={() => handleRowClick(claim._id)}
+                      className={`cursor-pointer ${
+                        claim.hasMatches ? 'bg-yellow-50 dark:bg-yellow-900/20' : ''
+                      } ${expandedClaimId === claim._id ? 'bg-gray-100 dark:bg-gray-700' : 'bg-stone-600'}
+                      border-b dark:border-gray-700 hover:bg-gray-700`}
                     >
-                      <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white hover:bg-gradient-to-r from-slate-600 via-blue-00 to-slate-600">
-                        <Link to={`/claims/${claim._id}`}>{claim.claimnumber}</Link>
+                      <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                        <Link to={`/claims/${claim._id}`}>
+                          {highlightText(claim.claimnumber, searchTerm)}
+                        </Link>
                       </th>
-                      <td className="px-6 py-4">{claim.name}</td>
+                      <td className="px-6 py-4">{highlightText(claim.name, searchTerm)}</td>
                       <td className="px-6 py-4">
                         {new Date(claim.date).toLocaleDateString()}
                       </td>
-                      <td className="px-6 py-4">{claim.adjuster}</td>
+                      <td className="px-6 py-4">{highlightText(claim.adjuster, searchTerm)}</td>
+                      {isAdvancedSearch && (
+                        <td className="px-6 py-4 text-sm">
+                          {claim.matchCount > 0 && (
+                            <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-0.5 rounded dark:bg-blue-900 dark:text-blue-300">
+                              {claim.matchCount} matches
+                            </span>
+                          )}
+                        </td>
+                      )}
                     </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
+                    
+                    {expandedClaimId === claim._id && (
+                      <tr>
+                        <td colSpan="5" className="px-6 py-4">
+                          <div className="animate-fadeIn space-y-4">
+                            {/* Document Search UI */}
+                            <div className="bg-slate-600 p-4 rounded-lg shadow">
+                              <div className="space-y-3">
+                                <div className="flex items-center space-x-2">
+                                  <div className="relative flex-1">
+                                    <input
+                                      type="text"
+                                      className="w-full pl-10 pr-4 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600"
+                                      placeholder="Search documents in this claim..."
+                                      value={documentSearchTerm}
+                                      onChange={(e) => setDocumentSearchTerm(e.target.value)}
+                                      onKeyDown={(e) => e.key === 'Enter' && handleDocumentSearch(claim._id, documentSearchTerm)}
+                                    />
+                                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                      <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                      </svg>
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => handleDocumentSearch(claim._id, documentSearchTerm)}
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                                  >
+                                    Search Documents
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Documents List */}
+                            <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
+                              <div className="p-4 border-b dark:border-gray-700">
+                                <div className="flex justify-between items-center">
+                                  <h3 className="text-lg font-semibold">Documents</h3>
+                                  <span className="text-sm text-gray-500">
+                                    {documentSearchTerm 
+                                      ? `${documentSearchResults.length} matches found`
+                                      : `${claimDocuments.length} total documents`}
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="divide-y dark:divide-gray-700">
+                                {documentSearchLoading ? (
+                                  <div className="p-4 text-center">Searching documents...</div>
+                                ) : (
+                                  (documentSearchTerm ? documentSearchResults : claimDocuments).map((doc) => (
+                                    <div key={doc._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
+                                      <div className="flex justify-between items-start">
+                                        <div className="space-y-1">
+                                          <div className="flex items-center space-x-2">
+                                            <span className="font-medium">{doc.fileName}</span>
+                                            <span className={`px-2 py-0.5 rounded-full text-xs ${getCategoryColor(doc.category)}`}>
+                                              {doc.category || 'Uncategorized'}
+                                            </span>
+                                          </div>
+                                          {documentSearchTerm && doc.textContent && (
+                                            <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
+                                              {highlightText(doc.textContent.substring(0, 200), documentSearchTerm)}...
+                                            </p>
+                                          )}
+                                        </div>
+                                        <button 
+                                          onClick={() => handleDownload(doc.fileUrl, doc.fileName)}
+                                          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                                        >
+                                          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                          </svg>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                  </React.Fragment>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -144,3 +385,4 @@ const ClaimQueryMatrix = () => {
 };
 
 export default ClaimQueryMatrix;
+ 

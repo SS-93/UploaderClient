@@ -32,6 +32,7 @@ function App() {
       
         <Route path='/home' element={<Home />} />
         <Route path='/allclaims' element={<AllClaims />} />
+        <Route path='/AILab' element={<AILab/>} />
         <Route path='/claims/:claimId' element={<ClaimProfile />} />
           <Route path='/test' className= '' element={<ClaimQueryMatrix/> } />
           <Route path='/park' className= '' element={<ParkingSession/> } />
