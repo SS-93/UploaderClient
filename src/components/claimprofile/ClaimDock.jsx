@@ -112,10 +112,11 @@ const ClaimDock = () => {
         
         {/* Claims table with same structure as AllClaims */}
         <ClaimQueryMatrix 
-          claimsData={claimsData}
-          isLoading={loading}
+          claims={claimsData.getAllClaims}
+          loading={loading}
           onClaimClick={handleClaimClick}
-          selectedClaim={selectedClaim}
+          selectedClaimId={selectedClaim?._id}
+          currentClaimId={currentClaimId}
         />
       </div>
     </>

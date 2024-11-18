@@ -11,7 +11,11 @@ function AiProcessor({ selectedOcrId, ocrText }) {
   useEffect(() => {
     if (ocrText) {
       setIsLoading(true);
-      performNER(ocrText)
+      const textToProcess = typeof ocrText === 'object' ? 
+        ocrText.textContent || '' : 
+        ocrText;
+      
+      performNER(textToProcess)
         .then(result => {
           setEntities(result);
           setEditableEntities(result);
@@ -121,6 +125,35 @@ function AiProcessor({ selectedOcrId, ocrText }) {
     });
   };
 
+  const renderDocument = (doc) => {
+    if (!doc) return null;
+    
+    // Handle string input
+    if (typeof doc === 'string') {
+      return <pre className="whitespace-pre-wrap">{doc}</pre>;
+    }
+
+    // Handle object input
+    const content = doc.textContent || 'No content available';
+    return (
+      <div className="space-y-4">
+        {doc.fileName && (
+          <div className="flex justify-between items-center">
+            <h3 className="text-lg font-semibold">{doc.fileName}</h3>
+            {doc.category && (
+              <span className="text-sm bg-gray-100 rounded-full px-3 py-1">
+                {doc.category}
+              </span>
+            )}
+          </div>
+        )}
+        <pre className="whitespace-pre-wrap bg-gray-50 p-4 rounded-lg">
+          {content}
+        </pre>
+      </div>
+    );
+  };
+
   return (
     <div>
       <div>AiProcessor</div>
@@ -194,11 +227,7 @@ function AiProcessor({ selectedOcrId, ocrText }) {
                   TEXT CONTENT
                 </h2>
                 <div className="text-gray-500 dark:text-gray-400 text-sm max-h-60 overflow-y-auto">
-                  {ocrText ? (
-                    <pre className="whitespace-pre-wrap">{ocrText}</pre>
-                  ) : (
-                    <p>No text content available</p>
-                  )}
+                  {renderDocument(ocrText)}
                 </div>
               </div>
               {/* Second Card - EXTRACTED ENTITIES */}

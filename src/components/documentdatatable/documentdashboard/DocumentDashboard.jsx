@@ -210,7 +210,14 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
 
   const handleRowClickII = (document) => {
     setSelectedDocumentId(document.OcrId);
-    onSelectDocument(document); // Pass the entire document object
+    const documentData = {
+      OcrId: document.OcrId,
+      textContent: document.textContent,
+      fileName: document.fileName,
+      category: document.category,
+      uploadDate: document.uploadDate
+    };
+    onSelectDocument(documentData); // Pass the formatted document object
   };
 
   const handleViewDocument = (fileUrl, documentId) => {

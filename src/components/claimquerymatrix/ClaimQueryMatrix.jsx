@@ -26,6 +26,7 @@ const ClaimQueryMatrix = () => {
   const [documentSearchResults, setDocumentSearchResults] = useState([]);
   const [documentSearchLoading, setDocumentSearchLoading] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
+  const [expandedDocId, setExpandedDocId] = useState(null);
 
   // Add search operators helper
   const searchOperators = {
@@ -92,12 +93,30 @@ const ClaimQueryMatrix = () => {
   };
 
   // Highlight matching text
-  const highlightText = (text, query) => {
-    if (!query || !text) return text;
-    const regex = new RegExp(`(${query})`, 'gi');
-    return text.split(regex).map((part, i) => 
+  const highlightText = (text, searchTerm) => {
+    if (!searchTerm?.trim() || !text) return text;
+
+    // Handle operator-based searches
+    let termToHighlight = searchTerm;
+    Object.entries(searchOperators).forEach(([_, operator]) => {
+      if (searchTerm.startsWith(operator)) {
+        termToHighlight = searchTerm.slice(operator.length);
+      }
+    });
+
+    // Escape special characters in the search term
+    const escapedTerm = termToHighlight.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const regex = new RegExp(`(${escapedTerm})`, 'gi');
+    const parts = text.split(regex);
+
+    return parts.map((part, i) => 
       regex.test(part) ? (
-        <mark key={i} className="bg-yellow-200 dark:bg-yellow-800">{part}</mark>
+        <mark 
+          key={i} 
+          className="bg-yellow-200 dark:bg-yellow-900/50 px-0.5 rounded"
+        >
+          {part}
+        </mark>
       ) : part
     );
   };
@@ -194,6 +213,21 @@ const ClaimQueryMatrix = () => {
 
   const toggleFilter = () => setFilterOpen(!filterOpen);
 
+  const handleDocumentClick = (docId) => {
+    setExpandedDocId(expandedDocId === docId ? null : docId);
+  };
+
+  // Add a new animation to your CSS
+  const styles = {
+    '@keyframes fadeIn': {
+      from: { opacity: 0, transform: 'translateY(-10px)' },
+      to: { opacity: 1, transform: 'translateY(0)' }
+    },
+    '.animate-fadeIn': {
+      animation: 'fadeIn 0.2s ease-out'
+    }
+  };
+
   return (
     <section className="container mx-auto p-6">
       <div className="bg-white dark:bg-gray-800 shadow-md rounded-lg overflow-hidden">
@@ -237,14 +271,14 @@ const ClaimQueryMatrix = () => {
                 <th scope="col" className="px-6 py-3">Name</th>
                 <th scope="col" className="px-6 py-3">Date</th>
                 <th scope="col" className="px-6 py-3">Adjuster</th>
-                <th scope="col" className="px-6 py-3">
+                {/* <th scope="col" className="px-6 py-3">
                   <div className="flex items-center space-x-1">
                     <span>Document Search</span>
                     <svg className="w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                     </svg>
                   </div>
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody>
@@ -340,31 +374,72 @@ const ClaimQueryMatrix = () => {
                                   <div className="p-4 text-center">Searching documents...</div>
                                 ) : (
                                   (documentSearchTerm ? documentSearchResults : claimDocuments).map((doc) => (
-                                    <div key={doc._id} className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700">
-                                      <div className="flex justify-between items-start">
-                                        <div className="space-y-1">
-                                          <div className="flex items-center space-x-2">
-                                            <span className="font-medium">{doc.fileName}</span>
-                                            <span className={`px-2 py-0.5 rounded-full text-xs ${getCategoryColor(doc.category)}`}>
-                                              {doc.category || 'Uncategorized'}
-                                            </span>
+                                    <React.Fragment key={doc._id}>
+                                      <div 
+                                        className="p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer"
+                                        onClick={() => handleDocumentClick(doc._id)}
+                                      >
+                                        <div className="flex justify-between items-start">
+                                          <div className="space-y-1">
+                                            <div className="flex items-center space-x-2">
+                                              <span className="font-medium">
+                                                {highlightText(doc.fileName, documentSearchTerm)}
+                                              </span>
+                                              <span className={`px-2 py-0.5 rounded-full text-xs ${getCategoryColor(doc.category)}`}>
+                                                {doc.category || 'Uncategorized'}
+                                              </span>
+                                            </div>
+                                            {documentSearchTerm && doc.matchDetails?.textMatches?.[0] && (
+                                              <p className="text-sm text-gray-600 dark:text-gray-300">
+                                                {highlightText(doc.matchDetails.textMatches[0].snippet, documentSearchTerm)}
+                                              </p>
+                                            )}
                                           </div>
-                                          {documentSearchTerm && doc.textContent && (
-                                            <p className="text-sm text-gray-600 dark:text-gray-300 line-clamp-2">
-                                              {highlightText(doc.textContent.substring(0, 200), documentSearchTerm)}...
-                                            </p>
-                                          )}
+                                          <button 
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDownload(doc.fileUrl, doc.fileName);
+                                            }}
+                                            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
+                                          >
+                                            <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                            </svg>
+                                          </button>
                                         </div>
-                                        <button 
-                                          onClick={() => handleDownload(doc.fileUrl, doc.fileName)}
-                                          className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
-                                        >
-                                          <svg className="w-5 h-5 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                          </svg>
-                                        </button>
                                       </div>
-                                    </div>
+
+                                      {/* Expanded document content */}
+                                      {expandedDocId === doc._id && (
+                                        <div className="px-4 pb-4 animate-fadeIn">
+                                          <div className="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 space-y-2">
+                                            <div className="flex justify-between items-center mb-2">
+                                              <h4 className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                                                Document Content
+                                              </h4>
+                                              {doc.matchDetails?.score && (
+                                                <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded-full dark:bg-blue-900/50 dark:text-blue-300">
+                                                  Match Score: {doc.matchDetails.score}
+                                                </span>
+                                              )}
+                                            </div>
+                                            <div className="prose prose-sm max-w-none dark:prose-invert">
+                                              <div className="bg-white dark:bg-gray-800 rounded border dark:border-gray-600 p-3 overflow-auto max-h-96">
+                                                {doc.textContent ? (
+                                                  <pre className="whitespace-pre-wrap font-sans">
+                                                    {highlightText(doc.textContent, documentSearchTerm)}
+                                                  </pre>
+                                                ) : (
+                                                  <p className="text-gray-500 dark:text-gray-400 italic">
+                                                    No text content available
+                                                  </p>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </React.Fragment>
                                   ))
                                 )}
                               </div>

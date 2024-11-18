@@ -25,7 +25,7 @@ function ParkingSession() {
 
   const fetchNewlyUploadedDocuments = async () => {
     try {
-      const response = await fetch('http://localhost:4000/dms/recent-uploads');
+      const response = await fetch('http://localhost:4000/new/recent-uploads');
       if (response.ok) {
         const result = await response.json();
         setUploadedDocuments(result.files);
@@ -39,7 +39,7 @@ function ParkingSession() {
 
   const fetchDocuments = async () => {
     try {
-      const response = await fetch(`http://localhost:4000/dms/parked-uploads/${parkId}`);
+      const response = await fetch(`http://localhost:4000/new/parked-uploads/${parkId}`);
       if (response.ok) {
         const result = await response.json();
         setDocuments(result.files);
@@ -57,7 +57,7 @@ function ParkingSession() {
 
     if (OcrId) {
       try {
-        const response = await fetch(`http://localhost:4000/dms/ocr-text/${OcrId}`);
+        const response = await fetch(`http://localhost:4000/new/ocr-text/${OcrId}`);
         const data = await response.json();
         
         if (response.ok) {
@@ -93,22 +93,28 @@ function ParkingSession() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ocrTextContent: ocrText }),
+        body: JSON.stringify({ text: ocrText }),
       });
 
-      const data = await response.json();
-
-      if (response.ok) {
-        console.log('OCR text saved successfully');
-        setTextContent(ocrText);
-        return Promise.resolve(); // Resolve the promise on success
-      } else {
-        console.error('Failed to save OCR text:', data.error);
-        return Promise.reject(new Error(data.error)); // Reject the promise on failure
+      if (!response.ok) {
+        throw new Error('Failed to save OCR text');
       }
+
+      const data = await response.json();
+      setTextContent(ocrText);
+      
+      setDocuments(prevDocs => 
+        prevDocs.map(doc => 
+          doc.OcrId === OcrId 
+            ? { ...doc, textContent: ocrText }
+            : doc
+        )
+      );
+
+      return Promise.resolve();
     } catch (error) {
       console.error('Error saving OCR text:', error);
-      return Promise.reject(error); // Reject the promise on error
+      return Promise.reject(error);
     }
   };
 

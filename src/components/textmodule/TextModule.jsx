@@ -98,7 +98,6 @@ function TextModule({ documentUrl, OcrId, textContent = '', onSaveOcrText, onTex
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    console.log('TextModule - Submitting with OcrId:', OcrId);
     if (!OcrId) {
       setMessage('OcrId is required to update text content.');
       return;

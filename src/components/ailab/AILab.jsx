@@ -10,22 +10,37 @@ function AILab() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [indexedClaims, setIndexedClaims] = useState([]);
 
-  const handleSelectDocument = async (ocrId) => {
-    setSelectedOcrId(ocrId);
-    if (ocrId) {
+  const handleSelectDocument = async (documentData) => {
+    setSelectedOcrId(documentData.OcrId);
+    if (documentData.OcrId) {
       try {
-        const response = await fetch(`http://localhost:4000/dms/ocr-text/${ocrId}`);
+        // If document already has text content, use it
+        if (documentData.textContent) {
+          setOcrText({
+            textContent: documentData.textContent,
+            fileName: documentData.fileName,
+            category: documentData.category
+          });
+          return;
+        }
+
+        // Use the dms endpoint for parked uploads
+        const response = await fetch(`http://localhost:4000/dms/ocr-text/${documentData.OcrId}`);
         if (!response.ok) {
           throw new Error('Failed to fetch OCR text');
         }
         const data = await response.json();
-        setOcrText(data.textContent);  // Note: changed from data.ocrText to data.textContent
+        setOcrText({
+          textContent: data.textContent,
+          fileName: data.fileName,
+          category: data.category
+        });
       } catch (error) {
         console.error('Error fetching OCR text:', error);
-        setOcrText('Failed to load OCR text');
+        setOcrText({ textContent: 'Failed to load OCR text' });
       }
     } else {
-      setOcrText('');
+      setOcrText(null);
     }
   };
 
@@ -46,6 +61,40 @@ function AILab() {
       }
     } else {
       setOcrText('');
+    }
+  };
+
+  const fetchOcrText = async (OcrId) => {
+    try {
+      // Ensure OcrId is passed as a number
+      const response = await fetch(`http://localhost:4000/new/ocr-text/${parseInt(OcrId, 10)}`);
+      if (!response.ok) throw new Error('Failed to fetch OCR text');
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error fetching OCR text:', error);
+      throw error;
+    }
+  };
+
+  const saveOcrText = async (OcrId, text) => {
+    try {
+      const response = await fetch(`http://localhost:4000/dms/ocr-text/${parseInt(OcrId, 10)}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ text }),
+      });
+
+      if (!response.ok) throw new Error('Failed to save OCR text');
+      
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Error saving OCR text:', error);
+      throw error;
     }
   };
 
