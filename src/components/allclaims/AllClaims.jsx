@@ -2,7 +2,7 @@ import {React, useState, useEffect} from 'react'
 import { Link, useParams } from 'react-router-dom';
 import Sidebar from '../claimprofile/Sidebar';
 import { useClaimContext } from '../claimcontext/ClaimContext';
-import SuggestedClaims from './SuggestedClaims';
+
 import { claimIndexer } from '../../utils/claimIndexer';  
 
 

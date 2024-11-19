@@ -1,74 +1,107 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 
-function SuggestedClaims({ selectedDocument, indexedClaims }) {
-  // Safely access document properties
-  const documentInfo = selectedDocument ? {
-    title: selectedDocument.fileName || 'Unnamed Document',
-    category: selectedDocument.category || 'Uncategorized',
-    ocrId: selectedDocument.OcrId || 'N/A'
-  } : null;
+const MatchScoreIndicator = ({ score }) => {
+    return (
+        <td className="px-6 py-4">
+            <div className="flex items-center">
+                <div className="h-2.5 w-full bg-gray-200 rounded dark:bg-gray-700">
+                    <div 
+                        className={`h-2.5 rounded ${
+                            score >= 75 ? 'bg-green-500' :
+                            score >= 50 ? 'bg-yellow-500' :
+                            'bg-red-500'
+                        }`}
+                        style={{ width: `${score}%` }}
+                    ></div>
+                </div>
+                <span className="ml-2">{score}%</span>
+            </div>
+        </td>
+    );
+};
 
-  return (
-    <div className="p-4">
-      <div className="mb-6">
-        <h2 className="text-xl font-bold mb-2">Selected Document:</h2>
-        {documentInfo ? (
-          <div className="bg-gray-100 p-4 rounded-lg">
-            <p className="text-gray-700"><span className="font-semibold">Title:</span> {documentInfo.title}</p>
-            <p className="text-gray-700"><span className="font-semibold">Category:</span> {documentInfo.category}</p>
-            <p className="text-gray-700"><span className="font-semibold">OCR ID:</span> {documentInfo.ocrId}</p>
-          </div>
-        ) : (
-          <p className="text-gray-500 italic">No document selected</p>
-        )}
-      </div>
+const SuggestedClaims = ({ selectedDocument, indexedClaims }) => {
+    console.log('SuggestedClaims - Document:', selectedDocument);
 
-      <h2 className="text-xl font-bold mb-4">Suggested Matches</h2>
-      <div className="relative overflow-x-auto">
-        <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-          <thead className="text-xs text-gray-200 uppercase bg-slate-900">
-            <tr>
-              <th scope="col" className="px-6 py-3">Match Score</th>
-              <th scope="col" className="px-6 py-3">Claim Number</th>
-              <th scope="col" className="px-6 py-3">Name</th>
-              <th scope="col" className="px-6 py-3">Date of Injury</th>
-              <th scope="col" className="px-6 py-3">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {indexedClaims.map((claim) => (
-              <tr key={claim._id} className="bg-stone-600 border-b hover:bg-stone-700">
-                <td className="px-6 py-4">
-                  <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
-                    ${claim.matchScore >= 50 ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                    {claim.matchScore}%
-                  </div>
-                </td>
-                <td className="px-6 py-4">{claim.claimNumber}</td>
-                <td className="px-6 py-4">{claim.name}</td>
-                <td className="px-6 py-4">{claim.dateOfInjury}</td>
-                <td className="px-6 py-4">
-                  <button 
-                    className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-                    onClick={() => handleSort(claim._id)}
-                  >
-                    Sort
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {indexedClaims.length === 0 && (
-              <tr>
-                <td colSpan="5" className="px-6 py-4 text-center italic">
-                  No matches found
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  );
-}
+    // Add data validation
+    const isValidDocument = selectedDocument && selectedDocument.OcrId;
 
-export default SuggestedClaims; 
+    // Format date safely
+    const formatDate = (dateString) => {
+        try {
+            return new Date(dateString).toLocaleDateString();
+        } catch (error) {
+            console.error('Error formatting date:', error);
+            return 'Invalid Date';
+        }
+    };
+    const handleSort = () => {
+        console.log('Sorting document:', selectedDocument?.OcrId);
+        // Add sorting logic here
+    };
+
+    return (
+        <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 md:p-12 mb-8">
+            <a href="#" className="bg-blue-100 text-blue-800 text-xs font-medium inline-flex items-center px-2.5 py-0.5 rounded-md dark:bg-gray-700 dark:text-blue-400 mb-2">
+                MATCHES
+            </a>
+            <h1 className="text-gray-900 dark:text-white text-3xl md:text-5xl font-extrabold mb-2">
+                Potential Claim Matches
+            </h1>
+            <div className="relative overflow-x-auto shadow-md sm:rounded-lg">
+                <table className="w-full text-sm text-left rtl:text-right text-gray-500 dark:text-gray-400">
+                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+                        <tr>
+                            <th scope="col" className="px-6 py-3">Document Title</th>
+                            <th scope="col" className="px-6 py-3">Match Score</th>
+                            <th scope="col" className="px-6 py-3">Category</th>
+                            <th scope="col" className="px-6 py-3">Suggested Claim(s)</th>
+                            <th scope="col" className="px-6 py-3"><span className="sr-only">Sort</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {isValidDocument ? (
+                            <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-600">
+                                <th scope="row" className="px-6 py-4 font-medium text-gray-900 whitespace-nowrap dark:text-white">
+                                    <div>
+                                        <div>{selectedDocument.fileName}</div>
+                                        <div className="text-xs text-gray-500">ID: {selectedDocument.OcrId}</div>
+                                        <div className="text-xs text-gray-500">
+                                            Uploaded: {formatDate(selectedDocument.uploadDate)}
+                                        </div>
+                                    </div>
+                                </th>
+                                <MatchScoreIndicator score={selectedDocument.matchScore || 75} />
+                                <td className="px-6 py-4">
+                                    {selectedDocument.category}
+                                </td>
+                                <td className="px-6 py-4">
+                                    {selectedDocument.suggestedClaims?.length > 0 
+                                        ? selectedDocument.suggestedClaims.join(', ')
+                                        : `Claim #${selectedDocument.OcrId}`
+                                    }
+                                </td>
+                                <td className="px-6 py-4 text-right">
+                                    <button 
+                                        onClick={() => handleSort()}
+                                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                                    >
+                                        Sort
+                                    </button>
+                                </td>
+                            </tr>
+                        ) : (
+                            <tr>
+                                <td colSpan="5" className="px-6 py-4 text-center">
+                                    No document selected
+                                </td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    );
+};
+
+export default SuggestedClaims;

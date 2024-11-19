@@ -20,7 +20,7 @@ import DocumentDashboard from './components/documentdatatable/documentdashboard/
 import ParkingSession from './components/parkingsession/ParkingSession';
 import AiProcessor from './components/aiprocessor/AiProcessor';
 import AILab from './components/ailab/AILab';
-import SuggestedClaims from './components/allclaims/SuggestedClaims';
+import SuggestedClaims from './components/suggestedclaims/SuggestedClaims';
 import ClaimQueryMatrix from './components/claimquerymatrix/ClaimQueryMatrix';
 import ClaimDock from './components/claimprofile/ClaimDock';
 
@@ -35,6 +35,7 @@ function App() {
         <Route path='/AILab' element={<AILab/>} />
         <Route path='/claims/:claimId' element={<ClaimProfile />} />
           <Route path='/test' className= '' element={<ClaimQueryMatrix/> } />
+          <Route path='SuggestedClaims' className= '' element={<SuggestedClaims/> } />
           <Route path='/park' className= '' element={<ParkingSession/> } />
         <Route path ='/newclaim' element={ <NewClaim/> }/>
         <Route path='/upload' element = {<FileInput/>} />

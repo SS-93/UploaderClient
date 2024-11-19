@@ -203,22 +203,26 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   };
 
 
-  const handleRowClick = (documentId) => {
-    setSelectedDocumentId(documentId);
-    onSelectDocument(documentId); // Call the parent function to update OCR ID
-  };
-
+  // const handleRowClick = (documentId) => {
+  //   setSelectedDocumentId(documentId);
+  //   onSelectDocument(documentId); // Call the parent function to update OCR ID
+  // };
   const handleRowClickII = (document) => {
     setSelectedDocumentId(document.OcrId);
     const documentData = {
-      OcrId: document.OcrId,
-      textContent: document.textContent,
-      fileName: document.fileName,
-      category: document.category,
-      uploadDate: document.uploadDate
+        OcrId: document.OcrId,
+        textContent: document.textContent || '',
+        fileName: document.fileName || 'Unnamed Document',
+        category: document.category || 'Uncategorized',
+        uploadDate: document.uploadDate || new Date().toISOString(),
+        matchScore: document.matchScore || 0,
+        suggestedClaims: document.suggestedClaims || []
     };
-    onSelectDocument(documentData); // Pass the formatted document object
-  };
+    console.log('DocumentDashboard - Document clicked:', documentData); 
+    onSelectDocument(documentData);
+};
+
+
 
   const handleViewDocument = (fileUrl, documentId) => {
     if (onViewDocument) {

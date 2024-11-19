@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import AiProcessor from '../aiprocessor/AiProcessor'
 import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDashboard'
 import ParkingSession from '../parkingsession/ParkingSession';
-import SuggestedClaims from '../allclaims/SuggestedClaims';
+import SuggestedClaims from '../suggestedclaims/SuggestedClaims';
 
 function AILab() {
   const [selectedOcrId, setSelectedOcrId] = useState(null);
@@ -16,6 +16,12 @@ function AILab() {
       try {
         // If document already has text content, use it
         if (documentData.textContent) {
+          setSelectedDocument({
+            OcrId: documentData.OcrId,
+            textContent: documentData.textContent,
+            fileName: documentData.fileName,
+            category: documentData.category
+          });
           setOcrText({
             textContent: documentData.textContent,
             fileName: documentData.fileName,
@@ -41,6 +47,7 @@ function AILab() {
       }
     } else {
       setOcrText(null);
+      setSelectedDocument(null);
     }
   };
 
@@ -61,6 +68,27 @@ function AILab() {
       }
     } else {
       setOcrText('');
+    }
+  };
+
+  const handleDocumentForSuggestions = async (document) => {
+    try {
+      // Normalize document data for suggestions
+      const normalizedDocument = {
+        OcrId: document.OcrId,
+        fileName: document.fileName || 'Untitled Document',
+        category: document.category || 'Uncategorized',
+        uploadDate: document.uploadDate || new Date().toISOString(),
+        textContent: document.textContent || ''
+      };
+
+      // Update selectedDocument state for SuggestedClaims
+      setSelectedDocument(normalizedDocument);
+
+      console.log('Document processed for suggestions:', normalizedDocument);
+
+    } catch (error) {
+      console.error('Error processing document for suggestions:', error);
     }
   };
 
@@ -106,15 +134,24 @@ function AILab() {
         ocrText={ocrText}
         // ... other props
       />
-      <DocumentDashboard
-        onSelectDocument={handleSelectDocument}
-        onSelectDocumentII={handleSelectDocumentII}
-        // ... other props
-      />
-      <SuggestedClaims 
+
+<SuggestedClaims 
         selectedDocument={selectedDocument}
         indexedClaims={indexedClaims}
+        fileName={selectedDocument?.fileName}
       />
+        
+      <DocumentDashboard
+        onSelectDocument={handleSelectDocument}
+        onSelectDocumentII={(doc) => {
+          handleSelectDocumentII(doc);
+          handleDocumentForSuggestions(doc);
+        }}
+        // ... other props
+      />
+
+      
+   
        {/* <ParkingSession
         onSelectDocument={handleSelectDocument}
         selectedOcrId={selectedOcrId}

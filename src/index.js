@@ -4,12 +4,15 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { ClaimProvider } from './components/claimcontext/ClaimContext';
+import { MatchProvider } from './components/matchcontext/MatchContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
-<ClaimProvider>
-    <App />
+    <ClaimProvider>
+      <MatchProvider>
+        <App />
+      </MatchProvider>
     </ClaimProvider>
   </React.StrictMode>
 );
