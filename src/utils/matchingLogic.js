@@ -11,7 +11,8 @@ export const SCORE_WEIGHTS = {
     DATE_OF_INJURY: 20,
     EMPLOYER_NAME: 15,
     INJURY_DESCRIPTION: 20,
-    PHYSICIAN_NAME: 15
+    PHYSICIAN_NAME: 15,
+    DATE_OF_BIRTH: 10
 };
 
 // Utility functions
@@ -134,6 +135,18 @@ export const calculateDocumentMatchScore = (documentEntities, claim) => {
         }
     }
 
+    // Add DOB matching
+    if (documentEntities.dateOfBirth && claim.dateOfBirth) {
+        const docDOB = new Date(documentEntities.dateOfBirth);
+        const claimDOB = new Date(claim.dateOfBirth);
+        
+        if (docDOB.getTime() === claimDOB.getTime()) {
+            totalScore += SCORE_WEIGHTS.DATE_OF_BIRTH;
+            matches.matchedFields.push('dateOfBirth');
+            matches.details.dateOfBirth = claim.dateOfBirth;
+        }
+    }
+
     // Calculate final score
     const TOTAL_POSSIBLE_SCORE = Object.values(SCORE_WEIGHTS).reduce((a, b) => a + b, 0);
     const percentageScore = (totalScore / TOTAL_POSSIBLE_SCORE) * 100;
@@ -150,7 +163,8 @@ export const calculateDocumentMatchScore = (documentEntities, claim) => {
             adjuster: claim.adjuster,
             employerName: claim.employerName,
             injuryDescription: claim.injuryDescription,
-            physicianName: claim.physicianName
+            physicianName: claim.physicianName,
+            dateOfBirth: claim.dateOfBirth
         }
     };
 };

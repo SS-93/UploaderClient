@@ -24,6 +24,31 @@ const SuggestedClaims = ({ selectedDocument, matchResults }) => {
     console.log('SuggestedClaims - Document:', selectedDocument);
     console.log('Match Results:', matchResults);
 
+    useEffect(() => {
+        console.log('Document Analysis:', {
+            document: selectedDocument,
+            matchScores: matchResults?.map(match => ({
+                claimNumber: match.claimNumber,
+                score: match.score,
+                matchedFields: match.matches?.matchedFields
+            }))
+        });
+    }, [selectedDocument, matchResults]);
+
+    useEffect(() => {
+        console.log('Document Analysis Debug:', {
+            document: {
+                id: selectedDocument?.OcrId,
+                fileName: selectedDocument?.fileName
+            },
+            matches: matchResults?.map(match => ({
+                claimNumber: match.claimNumber,
+                claimantName: match.claim?.name,
+                matchScore: match.score || 0
+            })) || []
+        });
+    }, [selectedDocument, matchResults]);
+
     const isValidDocument = selectedDocument && selectedDocument.OcrId;
 
     const formatDate = (dateString) => {
@@ -38,6 +63,16 @@ const SuggestedClaims = ({ selectedDocument, matchResults }) => {
     const handleSort = (claimId) => {
         console.log('Sorting document:', selectedDocument?.OcrId, 'to claim:', claimId);
         // Add sorting logic here
+    };
+
+    const getBestMatchScore = () => {
+        if (!matchResults || matchResults.length === 0) {
+            console.log('No match results available');
+            return 0;
+        }
+        const bestScore = Math.max(...matchResults.map(match => match.score || 0));
+        console.log('Best match score:', bestScore);
+        return bestScore;
     };
 
     return (
@@ -71,20 +106,21 @@ const SuggestedClaims = ({ selectedDocument, matchResults }) => {
                                         </div>
                                     </div>
                                 </th>
-                                <MatchScoreIndicator score={selectedDocument.matchScore || 75} />
+                                <MatchScoreIndicator score={getBestMatchScore()} />
                                 <td className="px-6 py-4">
-                                    {selectedDocument.category}
+                                    {selectedDocument.category || 'Unspecified'}
                                 </td>
                                 <td className="px-6 py-4">
-                                    {selectedDocument.suggestedClaims?.length > 0 
-                                        ? selectedDocument.suggestedClaims.join(', ')
-                                        : `Claim #${selectedDocument.OcrId}`
+                                    {matchResults?.length > 0 
+                                        ? matchResults.map(match => match.claimNumber).join(', ')
+                                        : 'No matches found'
                                     }
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <button 
                                         onClick={() => handleSort(selectedDocument.OcrId)}
                                         className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                                        disabled={!matchResults?.length}
                                     >
                                         Sort
                                     </button>

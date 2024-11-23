@@ -167,7 +167,21 @@ const ClaimQueryMatrix = () => {
       setDocumentSearchResults([]);
     } else {
       setExpandedClaimId(claimId);
-      await fetchClaimDocuments(claimId);
+      try {
+        const documents = await fetchClaimDocuments(claimId);
+        // Log match calculations
+        console.log('Document Match Calculations:', {
+          claimId,
+          documents: documents.map(doc => ({
+            id: doc._id,
+            fileName: doc.fileName,
+            matchScore: doc.matchDetails?.score,
+            matchedFields: doc.matchDetails?.matchedFields
+          }))
+        });
+      } catch (error) {
+        console.error('Error processing matches:', error);
+      }
     }
   };
 

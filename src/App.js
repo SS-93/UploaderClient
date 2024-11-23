@@ -23,6 +23,7 @@ import AILab from './components/ailab/AILab';
 import SuggestedClaims from './components/suggestedclaims/SuggestedClaims';
 import ClaimQueryMatrix from './components/claimquerymatrix/ClaimQueryMatrix';
 import ClaimDock from './components/claimprofile/ClaimDock';
+import MatchDetails from './components/claimquerymatrix/MatchDetails';
 
 function App() {
   return (
@@ -35,6 +36,7 @@ function App() {
         <Route path='/AILab' element={<AILab/>} />
         <Route path='/claims/:claimId' element={<ClaimProfile />} />
           <Route path='/test' className= '' element={<ClaimQueryMatrix/> } />
+          <Route path='/matchdetails' className= '' element={<MatchDetails/> } />
           <Route path='SuggestedClaims' className= '' element={<SuggestedClaims/> } />
           <Route path='/park' className= '' element={<ParkingSession/> } />
         <Route path ='/newclaim' element={ <NewClaim/> }/>

@@ -4,6 +4,7 @@ function NewClaim() {
   const [claimnumber, setClaimNumber] = useState("");
   const [name, setName] = useState("");
   const [date, setDate] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [adjuster, setAdjuster] = useState("");
   const [employerName, setEmployerName] = useState("");
   const [physicianName, setPhysicianName] = useState("");
@@ -19,6 +20,7 @@ function NewClaim() {
       claimnumber,
       name,
       date,
+      dateOfBirth,
       adjuster,
       phoneNumber,
       employerName,
@@ -31,6 +33,7 @@ function NewClaim() {
       'Claim Number': claimnumber,
       'Claimant Name': name,
       'Date of Injury': date,
+      'Date of Birth': dateOfBirth,
       'Adjuster': adjuster,
       'Phone Number': phoneNumber,
       'Employer': employerName,
@@ -63,6 +66,7 @@ function NewClaim() {
       setClaimNumber("");
       setName("");
       setDate("");
+      setDateOfBirth("");
       setAdjuster("");
       setPhoneNumber("");
       setEmployerName("");
@@ -146,7 +150,7 @@ function NewClaim() {
         <div class="relative z-0 w-full mb-5 group">
           <input
             type="date"
-            name="repeat_password"
+            name="floating_repeat_password"
             id="floating_repeat_password"
             class="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
             onChange={(e) => {
@@ -160,6 +164,23 @@ function NewClaim() {
             class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
           >
             Date of Injury
+          </label>
+        </div>
+        <div class="relative z-0 w-full mb-5 group">
+          <input
+            type="date"
+            name="floating_dob"
+            id="floating_dob"
+            class="block py-2.5 px-0 w-full text-sm text-gray-900 bg-transparent border-0 border-b-2 border-gray-300 appearance-none dark:text-white dark:border-gray-600 dark:focus:border-blue-500 focus:outline-none focus:ring-0 focus:border-blue-600 peer"
+            onChange={(e) => setDateOfBirth(e.target.value)}
+            placeholder=" "
+            required
+          />
+          <label
+            for="floating_dob"
+            class="peer-focus:font-medium absolute text-sm text-gray-500 dark:text-gray-400 duration-300 transform -translate-y-6 scale-75 top-3 -z-10 origin-[0] peer-focus:start-0 rtl:peer-focus:translate-x-1/4 peer-focus:text-blue-600 peer-focus:dark:text-blue-500 peer-placeholder-shown:scale-100 peer-placeholder-shown:translate-y-0 peer-focus:scale-75 peer-focus:-translate-y-6"
+          >
+            Date of Birth
           </label>
         </div>
         <div class="grid md:grid-cols-2 md:gap-6">
