@@ -20,13 +20,12 @@ const MatchScoreIndicator = ({ score }) => {
     );
 };
 
-const SuggestedClaims = ({ selectedDocument, indexedClaims }) => {
+const SuggestedClaims = ({ selectedDocument, matchResults }) => {
     console.log('SuggestedClaims - Document:', selectedDocument);
+    console.log('Match Results:', matchResults);
 
-    // Add data validation
     const isValidDocument = selectedDocument && selectedDocument.OcrId;
 
-    // Format date safely
     const formatDate = (dateString) => {
         try {
             return new Date(dateString).toLocaleDateString();
@@ -35,8 +34,9 @@ const SuggestedClaims = ({ selectedDocument, indexedClaims }) => {
             return 'Invalid Date';
         }
     };
-    const handleSort = () => {
-        console.log('Sorting document:', selectedDocument?.OcrId);
+
+    const handleSort = (claimId) => {
+        console.log('Sorting document:', selectedDocument?.OcrId, 'to claim:', claimId);
         // Add sorting logic here
     };
 
@@ -83,7 +83,7 @@ const SuggestedClaims = ({ selectedDocument, indexedClaims }) => {
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <button 
-                                        onClick={() => handleSort()}
+                                        onClick={() => handleSort(selectedDocument.OcrId)}
                                         className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
                                     >
                                         Sort

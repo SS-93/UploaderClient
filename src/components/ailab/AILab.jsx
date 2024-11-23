@@ -10,46 +10,47 @@ function AILab() {
   const [matchResults, setMatchResults] = useState([]);
 
   const handleSelectDocument = async (documentData) => {
+    console.log('AILab received document:', documentData);
+    
     setSelectedOcrId(documentData.OcrId);
     setSelectedDocument(documentData);
     
     if (documentData.OcrId) {
-      try {
-        // If document already has text content, use it
-        if (documentData.textContent) {
-          setOcrText({
-            textContent: documentData.textContent,
-            fileName: documentData.fileName,
-            category: documentData.category
-          });
+        try {
+            // If document already has text content, use it
+            if (documentData.textContent) {
+                setOcrText({
+                    textContent: documentData.textContent,
+                    fileName: documentData.fileName,
+                    category: documentData.category
+                });
 
-          // Fetch suggested claims
-          await fetchSuggestedClaims(documentData.OcrId);
-          return;
+                // Fetch suggested claims
+                await fetchSuggestedClaims(documentData.OcrId);
+                return;
+            }
+
+            // Fallback to fetching OCR text if not present
+            const response = await fetch(`http://localhost:4000/dms/ocr-text/${documentData.OcrId}`);
+            if (!response.ok) {
+                throw new Error('Failed to fetch OCR text');
+            }
+            const data = await response.json();
+            setOcrText({
+                textContent: data.textContent,
+                fileName: data.fileName,
+                category: data.category
+            });
+
+            // Fetch suggested claims after getting OCR text
+            await fetchSuggestedClaims(documentData.OcrId);
+        } catch (error) {
+            console.error('Error in handleSelectDocument:', error);
+            setOcrText({ textContent: 'Failed to load OCR text' });
         }
-
-        // Use the dms endpoint for parked uploads
-        const response = await fetch(`http://localhost:4000/dms/ocr-text/${documentData.OcrId}`);
-        if (!response.ok) {
-          throw new Error('Failed to fetch OCR text');
-        }
-        const data = await response.json();
-        setOcrText({
-          textContent: data.textContent,
-          fileName: data.fileName,
-          category: data.category
-        });
-
-        // Fetch suggested claims after getting OCR text
-        await fetchSuggestedClaims(documentData.OcrId);
-      } catch (error) {
-        console.error('Error fetching OCR text:', error);
-        setOcrText({ textContent: 'Failed to load OCR text' });
-      }
     } else {
-      setOcrText(null);
-      setSelectedDocument(null);
-      setMatchResults([]);
+        setOcrText(null);
+        setSelectedDocument(null);
     }
   };
 

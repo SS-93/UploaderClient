@@ -207,19 +207,50 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   //   setSelectedDocumentId(documentId);
   //   onSelectDocument(documentId); // Call the parent function to update OCR ID
   // };
-  const handleRowClickII = (document) => {
+  const handleRowClickII = async (document) => {
     setSelectedDocumentId(document.OcrId);
-    const documentData = {
-        OcrId: document.OcrId,
-        textContent: document.textContent || '',
-        fileName: document.fileName || 'Unnamed Document',
-        category: document.category || 'Uncategorized',
-        uploadDate: document.uploadDate || new Date().toISOString(),
-        matchScore: document.matchScore || 0,
-        suggestedClaims: document.suggestedClaims || []
-    };
-    console.log('DocumentDashboard - Document clicked:', documentData); 
-    onSelectDocument(documentData);
+    
+    try {
+        // First, fetch the full document details including text content
+        const response = await fetch(`http://localhost:4000/dms/ocr-text/${document.OcrId}`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch document details');
+        }
+        const fullDocument = await response.json();
+
+        // Prepare the document data with all necessary fields
+        const documentData = {
+            OcrId: document.OcrId,
+            textContent: fullDocument.textContent || document.textContent || '',
+            fileName: document.fileName || fullDocument.fileName || 'Unnamed Document',
+            category: document.category || fullDocument.category || 'Uncategorized',
+            uploadDate: document.uploadDate || fullDocument.uploadDate || new Date().toISOString(),
+            matchScore: document.matchScore || 0,
+            suggestedClaims: document.suggestedClaims || [],
+            // Add any additional NER-related fields
+            entities: fullDocument.entities || {},
+            matchResults: fullDocument.matchResults || []
+        };
+
+        console.log('DocumentDashboard - Document clicked:', documentData);
+        
+        // Trigger NER and scoring through onSelectDocument
+        onSelectDocument(documentData);
+
+    } catch (error) {
+        console.error('Error preparing document data:', error);
+        // Still send basic document data if fetch fails
+        const fallbackData = {
+            OcrId: document.OcrId,
+            textContent: document.textContent || '',
+            fileName: document.fileName || 'Unnamed Document',
+            category: document.category || 'Uncategorized',
+            uploadDate: document.uploadDate || new Date().toISOString(),
+            matchScore: 0,
+            suggestedClaims: []
+        };
+        onSelectDocument(fallbackData);
+    }
 };
 
 

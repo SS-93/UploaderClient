@@ -15,10 +15,11 @@ function AiProcessor({ selectedOcrId, ocrText }) {
         ocrText.textContent || '' : 
         ocrText;
       
-      performNER(textToProcess)
+      performNER(textToProcess, selectedOcrId)
         .then(result => {
-          setEntities(result);
-          setEditableEntities(result);
+          const extractedEntities = result.entities || {};
+          setEntities(extractedEntities);
+          setEditableEntities(extractedEntities);
           setIsLoading(false);
         })
         .catch(error => {
@@ -29,26 +30,30 @@ function AiProcessor({ selectedOcrId, ocrText }) {
       setEntities(null);
       setEditableEntities(null);
     }
-  }, [ocrText]);
+  }, [ocrText, selectedOcrId]);
 
   useEffect(() => {
     if (entities) {
-      setEditableEntities({
-        potentialClaimNumbers: entities.potentialClaimNumbers || [],
-        potentialClaimantNames: entities.potentialClaimantNames || [],
-        potentialEmployerNames: entities.potentialEmployerNames || [],
-        potentialInsurerNames: entities.potentialInsurerNames || [],
-        potentialMedicalProviderNames: entities.potentialMedicalProviderNames || [],
-        potentialPhysicianNames: entities.potentialPhysicianNames || [],
-        potentialDatesOfBirth: entities.potentialDatesOfBirth || [],
-        potentialDatesOfInjury: entities.potentialDatesOfInjury || [],
-        potentialInjuryDescriptions: entities.potentialInjuryDescriptions || []
-      });
+      const newEditableEntities = {
+        potentialClaimNumbers: Array.isArray(entities.potentialClaimNumbers) ? entities.potentialClaimNumbers : [],
+        potentialClaimantNames: Array.isArray(entities.potentialClaimantNames) ? entities.potentialClaimantNames : [],
+        potentialEmployerNames: Array.isArray(entities.potentialEmployerNames) ? entities.potentialEmployerNames : [],
+        potentialInsurerNames: Array.isArray(entities.potentialInsurerNames) ? entities.potentialInsurerNames : [],
+        potentialMedicalProviderNames: Array.isArray(entities.potentialMedicalProviderNames) ? entities.potentialMedicalProviderNames : [],
+        potentialPhysicianNames: Array.isArray(entities.potentialPhysicianNames) ? entities.potentialPhysicianNames : [],
+        potentialDatesOfBirth: Array.isArray(entities.potentialDatesOfBirth) ? entities.potentialDatesOfBirth : [],
+        potentialDatesOfInjury: Array.isArray(entities.potentialDatesOfInjury) ? entities.potentialDatesOfInjury : [],
+        potentialInjuryDescriptions: Array.isArray(entities.potentialInjuryDescriptions) ? entities.potentialInjuryDescriptions : []
+      };
+      console.log('Setting editableEntities:', newEditableEntities);
+      setEditableEntities(newEditableEntities);
     }
   }, [entities]);
 
   const renderEntities = () => {
     if (!editableEntities) return null;
+
+    console.log('Rendering entities:', editableEntities);
 
     return (
       <div>
@@ -56,20 +61,24 @@ function AiProcessor({ selectedOcrId, ocrText }) {
           <div key={category} className="mb-4">
             <h3 className="text-lg font-semibold capitalize">{category.replace('_', ' ')}</h3>
             <ul className="list-disc pl-5">
-              {items.map((item, index) => (
-                <li key={index}>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={item}
-                      onChange={(e) => handleEntityChange(category, index, e.target.value)}
-                      className="border border-gray-300 rounded px-2 py-1 w-full"
-                    />
-                  ) : (
-                    item
-                  )}
-                </li>
-              ))}
+              {Array.isArray(items) && items.length > 0 ? (
+                items.map((item, index) => (
+                  <li key={index}>
+                    {isEditing ? (
+                      <input
+                        type="text"
+                        value={item}
+                        onChange={(e) => handleEntityChange(category, index, e.target.value)}
+                        className="border border-gray-300 rounded px-2 py-1 w-full"
+                      />
+                    ) : (
+                      item
+                    )}
+                  </li>
+                ))
+              ) : (
+                <li>No items found.</li>
+              )}
             </ul>
           </div>
         ))}
