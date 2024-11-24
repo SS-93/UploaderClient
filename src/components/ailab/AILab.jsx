@@ -127,11 +127,11 @@ function AILab() {
         ocrText={ocrText}
       />
 
-      <SuggestedClaims 
+      {/* <SuggestedClaims 
         selectedDocument={selectedDocument}
         matchResults={matchResults}
         fileName={selectedDocument?.fileName}
-      />
+      /> */}
         
       <DocumentDashboard
         onSelectDocument={handleSelectDocument}

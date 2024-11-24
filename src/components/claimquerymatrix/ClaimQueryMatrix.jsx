@@ -160,6 +160,17 @@ const ClaimQueryMatrix = () => {
   };
 
   const handleRowClick = async (claimId) => {
+    console.log('Claims Indexing:', {
+      timestamp: new Date().toISOString(),
+      claimId,
+      action: 'claim_selected',
+      matchResults: claimDocuments?.map(doc => ({
+        documentId: doc._id,
+        matchScore: doc.matchDetails?.score,
+        indexedFields: doc.matchDetails?.matchedFields
+      }))
+    });
+
     if (expandedClaimId === claimId) {
       setExpandedClaimId(null);
       setClaimDocuments([]);

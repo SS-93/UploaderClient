@@ -1,12 +1,27 @@
 import React, { useState, useEffect } from 'react'
 import { performNER } from './openaiservices'
+import { findMatchingClaims } from '../../utils/matchingLogic'
 import AllClaims from '../allclaims/AllClaims';
+import SuggestedClaims from '../suggestedclaims/SuggestedClaims';
+import MatchDetails from '../claimquerymatrix/MatchDetails';
 
 function AiProcessor({ selectedOcrId, ocrText }) {
   const [entities, setEntities] = useState(null);
   const [editableEntities, setEditableEntities] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [matchResults, setMatchResults] = useState([]);
+  const [selectedDocument, setSelectedDocument] = useState(null);
+
+  useEffect(() => {
+    if (ocrText && selectedOcrId) {
+      setSelectedDocument({
+        OcrId: selectedOcrId,
+        textContent: ocrText,
+        fileName: typeof ocrText === 'object' ? ocrText.fileName : 'Document'
+      });
+    }
+  }, [ocrText, selectedOcrId]);
 
   useEffect(() => {
     if (ocrText) {
@@ -20,15 +35,23 @@ function AiProcessor({ selectedOcrId, ocrText }) {
           const extractedEntities = result.entities || {};
           setEntities(extractedEntities);
           setEditableEntities(extractedEntities);
-          setIsLoading(false);
+          
+          return findMatchingClaims(extractedEntities)
+            .then(matches => {
+              setMatchResults(matches);
+              console.log('Match Results from backend:', matches);
+            })
+            .catch(error => {
+              console.error('Error finding matching claims:', error);
+            });
         })
-        .catch(error => {
-          console.error('Error performing NER:', error);
+        .finally(() => {
           setIsLoading(false);
         });
     } else {
       setEntities(null);
       setEditableEntities(null);
+      setMatchResults([]);
     }
   }, [ocrText, selectedOcrId]);
 
@@ -92,7 +115,7 @@ function AiProcessor({ selectedOcrId, ocrText }) {
 
   const handleSave = async () => {
     try {
-      console.log('Sending entities:', editableEntities);  // Add this line
+      console.log('Sending entities:', editableEntities);
       const response = await fetch('http://localhost:4000/ai/save-entities', {
         method: 'POST',
         headers: {
@@ -111,7 +134,11 @@ function AiProcessor({ selectedOcrId, ocrText }) {
       const result = await response.json();
       setEntities(editableEntities);
       setIsEditing(false);
-      console.log('Entities updated successfully:', result.message);
+
+      const matches = await findMatchingClaims(editableEntities);
+      setMatchResults(matches);
+      console.log('Match Results after save:', matches);
+
     } catch (error) {
       console.error('Error saving updated entities:', error);
       alert('Failed to save updated entities');
@@ -163,12 +190,39 @@ function AiProcessor({ selectedOcrId, ocrText }) {
     );
   };
 
+  const renderMatchResults = () => {
+    if (!matchResults || matchResults.length === 0) {
+      return <p>No matches found</p>;
+    }
+
+    return (
+      <div className="space-y-4">
+        <h3 className="text-lg font-semibold">Match Results</h3>
+        {matchResults.map((match, index) => (
+          <div key={index} className="border rounded-lg p-4 bg-white">
+            <div className="flex justify-between items-center mb-2">
+              <h4 className="font-medium">Claim: {match.claim.claimNumber}</h4>
+              <span className="text-sm text-gray-500">Score: {match.score}%</span>
+            </div>
+            <MatchDetails matchDetails={match} />
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   return (
     <div>
       <div>AiProcessor</div>
       <div>
         <section className="bg-white dark:bg-gray-900">
           <div className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16">
+            <div className="mb-8">
+              <SuggestedClaims 
+                selectedDocument={selectedDocument}
+                matchResults={matchResults}
+              />
+            </div>
             <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 md:p-12 mb-8">
               <a
                 href="#"
@@ -188,7 +242,14 @@ function AiProcessor({ selectedOcrId, ocrText }) {
               <h1 className="text-gray-900 dark:text-white text-3xl md:text-5xl font-extrabold mb-2">
                 Potential Claim Matches
               </h1>
-              <AllClaims/>  
+              <div className="mt-4">
+                {isLoading ? (
+                  <p>Loading matches...</p>
+                ) : (
+                  renderMatchResults()
+                )}
+              </div>
+              {/* <AllClaims/>   */}
               <p className="text-lg font-normal text-gray-500 dark:text-gray-400 mb-6">
                 Selected Document OCR ID: {selectedOcrId || 'No document selected'}
               </p>

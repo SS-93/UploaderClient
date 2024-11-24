@@ -1,34 +1,13 @@
 import React, { useEffect } from 'react';
-
-const MatchScoreIndicator = ({ score }) => {
-    return (
-        <td className="px-6 py-4">
-            <div className="flex items-center">
-                <div className="h-2.5 w-full bg-gray-200 rounded dark:bg-gray-700">
-                    <div 
-                        className={`h-2.5 rounded ${
-                            score >= 75 ? 'bg-green-500' :
-                            score >= 50 ? 'bg-yellow-500' :
-                            'bg-red-500'
-                        }`}
-                        style={{ width: `${score}%` }}
-                    ></div>
-                </div>
-                <span className="ml-2">{score}%</span>
-            </div>
-        </td>
-    );
-};
+import MatchScoreIndicator from './MatchScoreIndicator';
 
 const SuggestedClaims = ({ selectedDocument, matchResults }) => {
-    console.log('SuggestedClaims - Document:', selectedDocument);
-    console.log('Match Results:', matchResults);
-
+    // Keep the detailed console logs for debugging
     useEffect(() => {
         console.log('Document Analysis:', {
             document: selectedDocument,
             matchScores: matchResults?.map(match => ({
-                claimNumber: match.claimNumber,
+                claimNumber: match.claim?.claimNumber, // Updated to match backend structure
                 score: match.score,
                 matchedFields: match.matches?.matchedFields
             }))
@@ -42,9 +21,10 @@ const SuggestedClaims = ({ selectedDocument, matchResults }) => {
                 fileName: selectedDocument?.fileName
             },
             matches: matchResults?.map(match => ({
-                claimNumber: match.claimNumber,
+                claimNumber: match.claim?.claimNumber, // Updated to match backend structure
                 claimantName: match.claim?.name,
-                matchScore: match.score || 0
+                matchScore: match.score || 0,
+                matchedFields: match.matches?.matchedFields || [] // Added for debugging
             })) || []
         });
     }, [selectedDocument, matchResults]);
@@ -73,6 +53,20 @@ const SuggestedClaims = ({ selectedDocument, matchResults }) => {
         const bestScore = Math.max(...matchResults.map(match => match.score || 0));
         console.log('Best match score:', bestScore);
         return bestScore;
+    };
+
+    const getSuggestedClaims = () => {
+        if (!matchResults?.length) return 'No matches found';
+        
+        return matchResults.map(match => ({
+            claimNumber: match.claim?.claimNumber,
+            score: match.score,
+            matchedFields: match.matches?.matchedFields || []
+        }))
+        .map(({ claimNumber, score }) => 
+            `${claimNumber} (${score}%)`
+        )
+        .join(', ');
     };
 
     return (
@@ -111,10 +105,7 @@ const SuggestedClaims = ({ selectedDocument, matchResults }) => {
                                     {selectedDocument.category || 'Unspecified'}
                                 </td>
                                 <td className="px-6 py-4">
-                                    {matchResults?.length > 0 
-                                        ? matchResults.map(match => match.claimNumber).join(', ')
-                                        : 'No matches found'
-                                    }
+                                    {getSuggestedClaims()}
                                 </td>
                                 <td className="px-6 py-4 text-right">
                                     <button 
