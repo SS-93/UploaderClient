@@ -19,6 +19,8 @@ export const findMatchingClaims = async (documentEntities) => {
 
         const data = await response.json();
         console.log('Match results received:', data.matchResults);
+        console.log('Total Matches:', data.totalMatches);
+        console.log('Top Score:', data.topScore);
         return data.matchResults || [];
     } catch (error) {
         console.error('Error in findMatchingClaims:', error);
