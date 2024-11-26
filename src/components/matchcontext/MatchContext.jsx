@@ -9,21 +9,24 @@ export const MatchProvider = ({ children }) => {
         totalMatches: 0,
         topScore: 0,
         loading: false,
-        error: null
+        error: null,
+        lastUpdated: null
     });
 
     const findMatches = async (documentEntities) => {
         try {
             setMatchState(prev => ({ ...prev, loading: true, error: null }));
             
-            const { totalMatches, topScore, matchResults } = await findMatchingClaims(documentEntities);
+            const result = await findMatchingClaims(documentEntities);
+            console.log('Match results received in context:', result);
             
             setMatchState({
-                matches: matchResults,
-                totalMatches,
-                topScore,
+                matches: result.matchResults,
+                totalMatches: result.totalMatches,
+                topScore: result.topScore,
                 loading: false,
-                error: null
+                error: null,
+                lastUpdated: new Date().toISOString()
             });
         } catch (error) {
             console.error('Match finding error:', error);

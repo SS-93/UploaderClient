@@ -1,9 +1,34 @@
-import React, { useEffect, useContext } from 'react';
+import React, { useEffect, useContext, useCallback } from 'react';
 import MatchScoreIndicator from './MatchScoreIndicator';
 import { MatchContext } from '../matchcontext/MatchContext';
 
 const SuggestedClaims = ({ selectedDocument }) => {
-    const { matches, totalMatches, topScore, loading, error } = useContext(MatchContext);
+    const { 
+        matches, 
+        totalMatches, 
+        topScore, 
+        loading, 
+        error, 
+        findMatches,
+        lastUpdated 
+    } = useContext(MatchContext);
+
+    const handleRefresh = useCallback(async () => {
+        if (selectedDocument?.textContent) {
+            await findMatches(selectedDocument.textContent);
+        }
+    }, [selectedDocument, findMatches]);
+
+    useEffect(() => {
+        if (lastUpdated) {
+            console.log('Matches updated:', {
+                totalMatches,
+                topScore,
+                matchesCount: matches?.length,
+                timestamp: lastUpdated
+            });
+        }
+    }, [lastUpdated, matches, totalMatches, topScore]);
 
     useEffect(() => {
         console.log('Document Analysis:', {
@@ -129,11 +154,22 @@ const SuggestedClaims = ({ selectedDocument }) => {
         );
     };
 
+    const renderLoadingState = () => (
+        <div className="animate-pulse space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-3/4"></div>
+            <div className="h-8 bg-gray-200 rounded"></div>
+            <div className="space-y-3">
+                <div className="h-4 bg-gray-200 rounded"></div>
+                <div className="h-4 bg-gray-200 rounded w-5/6"></div>
+            </div>
+        </div>
+    );
+
     const renderMatchesCell = () => {
         if (loading) {
             return (
                 <td className="px-6 py-4">
-                    <div className="animate-pulse">Loading matches...</div>
+                    {renderLoadingState()}
                 </td>
             );
         }
@@ -156,6 +192,34 @@ const SuggestedClaims = ({ selectedDocument }) => {
             </td>
         );
     };
+
+    // Add a debug panel during development
+    const renderDebugInfo = () => (
+        <div className="text-xs text-gray-500 mt-2">
+            <div>Loading: {loading ? 'Yes' : 'No'}</div>
+            <div>Total Matches: {totalMatches}</div>
+            <div>Top Score: {topScore}</div>
+            <div>Matches Array Length: {matches?.length}</div>
+            <div>Last Updated: {
+                lastUpdated 
+                    ? new Date(lastUpdated).toLocaleTimeString() 
+                    : 'Never'
+            }</div>
+        </div>
+    );
+
+    // Add refresh button to your UI
+    const renderRefreshButton = () => (
+        <button
+            onClick={handleRefresh}
+            disabled={loading}
+            className="ml-2 p-2 text-blue-600 hover:text-blue-800 disabled:text-gray-400"
+        >
+            <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+        </button>
+    );
 
     return (
         <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 md:p-12 mb-8">
@@ -213,6 +277,8 @@ const SuggestedClaims = ({ selectedDocument }) => {
                     </tbody>
                 </table>
             </div>
+            {process.env.NODE_ENV === 'development' && renderDebugInfo()}
+            {renderRefreshButton()}
         </div>
     );
 };
