@@ -1,17 +1,26 @@
-import React, { useEffect, useContext, useCallback } from 'react';
+import React, { useEffect, useContext, useCallback, useState } from 'react';
 import MatchScoreIndicator from './MatchScoreIndicator';
 import { MatchContext } from '../matchcontext/MatchContext';
 
 const SuggestedClaims = ({ selectedDocument }) => {
     const { 
-        matches, 
+        detailedMatches, 
         totalMatches, 
         topScore, 
         loading, 
         error, 
         findMatches,
-        lastUpdated 
+        getMatchHistory,
+        matchHistory,
+        lastUpdated,
+        saveMatchHistory
     } = useContext(MatchContext);
+
+    useEffect(() => {
+        if (selectedDocument?.OcrId) {
+            getMatchHistory(selectedDocument.OcrId);
+        }
+    }, [selectedDocument, getMatchHistory]);
 
     const handleRefresh = useCallback(async () => {
         if (selectedDocument?.textContent) {
@@ -24,16 +33,16 @@ const SuggestedClaims = ({ selectedDocument }) => {
             console.log('Matches updated:', {
                 totalMatches,
                 topScore,
-                matchesCount: matches?.length,
+                matchesCount: detailedMatches?.length,
                 timestamp: lastUpdated
             });
         }
-    }, [lastUpdated, matches, totalMatches, topScore]);
+    }, [lastUpdated, detailedMatches, totalMatches, topScore]);
 
     useEffect(() => {
         console.log('Document Analysis:', {
             document: selectedDocument,
-            matchScores: matches?.map(match => ({
+            matchScores: detailedMatches?.map(match => ({
                 claimNumber: match.claim?.claimNumber,
                 score: match.score,
                 matchedFields: match.matches?.matchedFields
@@ -41,7 +50,7 @@ const SuggestedClaims = ({ selectedDocument }) => {
             totalMatches,
             topScore
         });
-    }, [selectedDocument, matches, totalMatches, topScore]);
+    }, [selectedDocument, detailedMatches, totalMatches, topScore]);
 
     useEffect(() => {
         console.log('Document Analysis Debug:', {
@@ -49,14 +58,14 @@ const SuggestedClaims = ({ selectedDocument }) => {
                 id: selectedDocument?.OcrId,
                 fileName: selectedDocument?.fileName
             },
-            matches: matches?.map(match => ({
+            matches: detailedMatches?.map(match => ({
                 claimNumber: match.claim?.claimNumber, // Updated to match backend structure
                 claimantName: match.claim?.name,
                 matchScore: match.score || 0,
                 matchedFields: match.matches?.matchedFields || [] // Added for debugging
             })) || []
         });
-    }, [selectedDocument, matches]);
+    }, [selectedDocument, detailedMatches]);
 
     const isValidDocument = selectedDocument && selectedDocument.OcrId;
 
@@ -74,78 +83,72 @@ const SuggestedClaims = ({ selectedDocument }) => {
         // Add sorting logic here
     };
 
-    const getBestMatchScore = () => {
-        if (!matches || matches.length === 0) {
-            console.log('No match results available');
-            return 0;
-        }
-        const bestScore = Math.max(...matches.map(match => match.score || 0));
-        console.log('Best match score:', bestScore);
-        return bestScore;
+    const getBestMatch = () => {
+        if (!detailedMatches || detailedMatches.length === 0) return null;
+        
+        return detailedMatches.reduce((best, current) => {
+            return (current.score > (best?.score || 0)) ? current : best;
+        }, null);
     };
 
     const renderMatchDetails = (match) => {
         return (
             <div className="space-y-2">
-                {/* Summary Row */}
-                <div className="flex justify-between text-sm">
-                    <span>Match Score: {match.score}%</span>
-                    <span>{match.matches.matchedFields.length} fields matched</span>
+                <div className="flex justify-between items-center">
+                    <div className="text-sm font-medium">
+                        Match Score: {match.score}%
+                    </div>
+                    <div className="text-sm">
+                        {match.matches.matchedFields.length} fields matched
+                    </div>
                 </div>
-                
-                {/* Matched Fields Grid */}
-                <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="grid grid-cols-2 gap-2">
                     {Object.entries(match.matches.details).map(([field, detail]) => (
-                        <div 
-                            key={field}
+                        <div key={field} 
                             className={`p-2 rounded ${
                                 detail.matched 
-                                    ? 'bg-green-100 dark:bg-green-800' 
-                                    : 'bg-gray-100 dark:bg-gray-700'
+                                    ? 'bg-green-50 text-green-700' 
+                                    : 'bg-gray-50 text-gray-500'
                             }`}
                         >
-                            <div className="flex justify-between">
-                                <span className="capitalize">{field.replace(/([A-Z])/g, ' $1').trim()}</span>
-                                <span>{detail.score} pts</span>
+                            <div className="text-sm font-medium capitalize">
+                                {field.replace(/([A-Z])/g, ' $1').trim()}
+                            </div>
+                            <div className="text-xs">
+                                Score: {detail.score} pts
                             </div>
                         </div>
                     ))}
-                </div>
-
-                {/* Claim Details */}
-                <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700 rounded">
-                    <h4 className="font-medium mb-1">Claim Details:</h4>
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                        {Object.entries(match.claim).map(([key, value]) => (
-                            <div key={key} className="flex justify-between">
-                                <span className="capitalize">{key.replace(/([A-Z])/g, ' $1').trim()}:</span>
-                                <span>{value}</span>
-                            </div>
-                        ))}
-                    </div>
                 </div>
             </div>
         );
     };
 
     const getSuggestedClaims = () => {
-        if (!matches?.length) return 'No matches found';
+        if (!detailedMatches?.length) return 'No matches found';
         
         return (
             <div className="space-y-4">
-                {matches.map((match, index) => (
+                {detailedMatches.map((match, index) => (
                     <div key={index} className="border-b last:border-b-0 pb-4">
                         <div className="flex justify-between items-center mb-2">
-                            <span className="font-medium">
-                                Claim: {match.claim.claimNumber}
-                            </span>
-                            <span className={`px-2 py-1 rounded text-xs ${
-                                match.isRecommended 
-                                    ? 'bg-green-100 text-green-800' 
-                                    : 'bg-gray-100 text-gray-800'
-                            }`}>
-                                {match.isRecommended ? 'Recommended' : 'Not Recommended'}
-                            </span>
+                            <div className="space-y-1">
+                                <div className="font-medium">
+                                    Claim: {match.claim.claimNumber}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                    {match.claim.name} - {match.claim.employerName}
+                                </div>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                                <span className={`px-2 py-1 rounded text-xs ${
+                                    match.isRecommended 
+                                        ? 'bg-green-100 text-green-800' 
+                                        : 'bg-gray-100 text-gray-800'
+                                }`}>
+                                    {match.isRecommended ? 'Recommended' : 'Not Recommended'}
+                                </span>
+                            </div>
                         </div>
                         {renderMatchDetails(match)}
                     </div>
@@ -199,7 +202,7 @@ const SuggestedClaims = ({ selectedDocument }) => {
             <div>Loading: {loading ? 'Yes' : 'No'}</div>
             <div>Total Matches: {totalMatches}</div>
             <div>Top Score: {topScore}</div>
-            <div>Matches Array Length: {matches?.length}</div>
+            <div>Matches Array Length: {detailedMatches?.length}</div>
             <div>Last Updated: {
                 lastUpdated 
                     ? new Date(lastUpdated).toLocaleTimeString() 
@@ -217,6 +220,58 @@ const SuggestedClaims = ({ selectedDocument }) => {
         >
             <svg className={`w-5 h-5 ${loading ? 'animate-spin' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+        </button>
+    );
+
+    const renderMatchHistory = () => (
+        <div className="mt-4">
+            <h3 className="text-lg font-semibold">Match History</h3>
+            {matchHistory.map((match, index) => (
+                <div key={index} className="border-b p-2">
+                    <div className="flex justify-between">
+                        <span>Score: {match.score}%</span>
+                        <span>{new Date(match.matchedAt).toLocaleString()}</span>
+                    </div>
+                    <div className="text-sm">
+                        Matched Fields: {match.matchedFields.join(', ')}
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+
+    const handleManualSave = async () => {
+        if (selectedDocument?.OcrId && detailedMatches.length > 0) {
+            const matchResults = {
+                matches: detailedMatches,
+                timestamp: new Date().toISOString(),
+                topScore: topScore,
+                recommendedMatches: detailedMatches
+                    .filter(match => match.score >= 75)
+                    .map(match => ({
+                        score: match.score,
+                        matchedFields: match.matchedFields || [],
+                        confidence: match.confidence || {},
+                        matchDetails: match.matches?.details || {},
+                        isRecommended: true,
+                        claimId: match.claimId,
+                        claimNumber: match.claimNumber
+                    }))
+            };
+            await saveMatchHistory(selectedDocument.OcrId, matchResults);
+        }
+    };
+
+    // Add this button near the refresh button
+    const renderSaveButton = () => (
+        <button
+            onClick={handleManualSave}
+            disabled={loading || !detailedMatches.length}
+            className="ml-2 p-2 text-green-600 hover:text-green-800 disabled:text-gray-400"
+        >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
             </svg>
         </button>
     );
@@ -252,7 +307,18 @@ const SuggestedClaims = ({ selectedDocument }) => {
                                         </div>
                                     </div>
                                 </th>
-                                <MatchScoreIndicator score={getBestMatchScore()} />
+                                <MatchScoreIndicator 
+                                    score={getBestMatch()?.score || 0}
+                                    matchDetails={{
+                                        isRecommended: getBestMatch()?.isRecommended || false,
+                                        claimNumber: getBestMatch()?.claimNumber,
+                                        matchedFields: getBestMatch()?.matchedFields || [],
+                                        totalScore: getBestMatch()?.score || 0,
+                                        claimantName: getBestMatch()?.claimantName,
+                                        dateOfInjury: getBestMatch()?.dateOfInjury,
+                                        matchDetails: getBestMatch()?.matches?.details || {}
+                                    }}
+                                />
                                 <td className="px-6 py-4">
                                     {selectedDocument.category || 'Unspecified'}
                                 </td>
@@ -261,7 +327,7 @@ const SuggestedClaims = ({ selectedDocument }) => {
                                     <button 
                                         onClick={() => handleSort(selectedDocument.OcrId)}
                                         className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                                        disabled={!matches?.length}
+                                        disabled={!detailedMatches?.length}
                                     >
                                         Sort
                                     </button>
@@ -279,6 +345,8 @@ const SuggestedClaims = ({ selectedDocument }) => {
             </div>
             {process.env.NODE_ENV === 'development' && renderDebugInfo()}
             {renderRefreshButton()}
+            {renderSaveButton()}
+            {renderMatchHistory()}
         </div>
     );
 };

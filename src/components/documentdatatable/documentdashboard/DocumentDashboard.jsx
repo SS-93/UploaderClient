@@ -20,6 +20,8 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   const [showModal, setShowModal] = useState(false);
   const [trueId, setTrueId] = useState(null);
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
+  const [showMatchHistory, setShowMatchHistory] = useState(false);
+  const [selectedDocMatchHistory, setSelectedDocMatchHistory] = useState(null);
 
   
   const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
@@ -352,6 +354,22 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
 
   const allDocuments = [...documents, ...fetchedDocuments, ...parkedDocuments];
 
+  const viewMatchHistory = async (OcrId, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log(`Requesting match history for OcrId: ${OcrId}`);
+    try {
+        const response = await fetch(`http://localhost:4000/match-history/${OcrId}`);
+        if (!response.ok) throw new Error('Failed to fetch match history');
+        const data = await response.json();
+        console.log(`Match history received for OcrId: ${OcrId}`, data.matchHistory);
+        setSelectedDocMatchHistory(data);
+        setShowMatchHistory(true);
+    } catch (error) {
+        console.error('Error fetching match history:', error);
+    }
+};
+
   return (
     <div>
       {showLoadingBar ? (
@@ -451,6 +469,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                       <th scope="col" className="px-4 py-3">Category</th>
                       <th scope="col" className="px-4 py-3">Remove File</th>
                       <th scope="col" className="px-4 py-3">Sort File</th>
+                      <th scope="col" className="px-4 py-3">Match History</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -530,6 +549,13 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                         handleSortDocuments(doc.OcrId); 
                       }}>Sort</a>
                     </td>
+                    <td className="px-4 py-3">
+                      <a href="#" 
+                         onClick={(e) => viewMatchHistory(doc.OcrId, e)}
+                         className="text-blue-600 hover:underline">
+                        View History
+                      </a>
+                    </td>
                   </tr>
                 ))}
               </tbody>s
@@ -561,6 +587,53 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                 <button onClick={handleCancelDelete} type="button" className="py-2.5 px-5 ms-3 text-sm font-medium text-gray-900 focus:outline-none bg-white rounded-lg border border-gray-200 hover:bg-gray-100 hover:text-blue-700 focus:z-10 focus:ring-4 focus:ring-gray-100 dark:focus:ring-gray-700 dark:bg-gray-800 dark:text-gray-400 dark:border-gray-600 dark:hover:text-white dark:hover:bg-gray-700">
                   No, cancel
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showMatchHistory && (
+        <div id="popup-modal" tabIndex="-1" className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+          <div className="relative p-4 w-full max-w-md max-h-full">
+            <div className="relative bg-white rounded-lg shadow dark:bg-gray-700">
+              <button type="button" className="absolute top-3 end-2.5 text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm w-8 h-8 ms-auto inline-flex justify-center items-center dark:hover:bg-gray-600 dark:hover:text-white" onClick={() => setShowMatchHistory(false)}>
+                <svg className="w-3 h-3" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 14 14">
+                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 1 6 6m0 0 6 6M7 7l6-6M7 7l-6 6"/>
+                </svg>
+                <span className="sr-only">Close modal</span>
+              </button>
+              <div className="p-4 md:p-5 text-center">
+                <svg className="mx-auto mb-4 text-gray-400 w-12 h-12 dark:text-gray-200" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 20">
+                  <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 11V6m0 8h.01M19 10a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+                </svg>
+                <h3 className="mb-5 text-lg font-normal text-gray-500 dark:text-gray-400">Match History for Document {selectedDocMatchHistory.OcrId}</h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400">
+                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 w-full">
+                      <tr>
+                        <th scope="col" className="px-4 py-3">Match ID</th>
+                        <th scope="col" className="px-4 py-3">Match Date</th>
+                        <th scope="col" className="px-4 py-3">Match Score</th>
+                        <th scope="col" className="px-4 py-3">Suggested Claims</th>
+                        <th scope="col" className="px-4 py-3">Entities</th>
+                        <th scope="col" className="px-4 py-3">Match Results</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {selectedDocMatchHistory.matchHistory.map((match, index) => (
+                        <tr key={index}>
+                          <td className="px-4 py-3">{match.matchId}</td>
+                          <td className="px-4 py-3">{new Date(match.matchDate).toLocaleDateString()}</td>
+                          <td className="px-4 py-3">{match.matchScore}</td>
+                          <td className="px-4 py-3">{JSON.stringify(match.suggestedClaims)}</td>
+                          <td className="px-4 py-3">{JSON.stringify(match.entities)}</td>
+                          <td className="px-4 py-3">{JSON.stringify(match.matchResults)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           </div>

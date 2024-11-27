@@ -116,7 +116,7 @@ function AiProcessor({ selectedOcrId, ocrText }) {
   const handleSave = async () => {
     try {
       console.log('Sending entities:', editableEntities);
-      const response = await fetch('http://localhost:4000/ai/save-entities', {
+      const entityResponse = await fetch('http://localhost:4000/ai/save-entities', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -127,21 +127,30 @@ function AiProcessor({ selectedOcrId, ocrText }) {
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Failed to save updated entities');
+      if (!entityResponse.ok) {
+        throw new Error('Failed to save entities');
       }
-
-      const result = await response.json();
-      setEntities(editableEntities);
-      setIsEditing(false);
 
       const matches = await findMatchingClaims(editableEntities);
       setMatchResults(matches);
-      console.log('Match Results after save:', matches);
 
+      const matchHistoryResponse = await fetch('http://localhost:4000/match-history', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          OcrId: selectedOcrId,
+          matchResults: matches
+        }),
+      });
+
+      if (!matchHistoryResponse.ok) {
+        throw new Error('Failed to save match history');
+      }
+
+      setIsEditing(false);
     } catch (error) {
-      console.error('Error saving updated entities:', error);
-      alert('Failed to save updated entities');
+      console.error('Error in handleSave:', error);
+      alert('Failed to save changes');
     }
   };
 
