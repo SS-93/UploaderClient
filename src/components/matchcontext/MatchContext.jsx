@@ -1,4 +1,4 @@
-import React, { createContext, useState } from 'react';
+import React, { createContext, useState, useCallback } from 'react';
 import { findMatchingClaims } from '../../utils/matchingLogic';
 import { transformMatchResults } from '../../utils/matchTransformer';
 
@@ -16,131 +16,50 @@ export const MatchProvider = ({ children }) => {
         matchHistory: []
     });
 
-    const saveMatchHistory = async (OcrId, matchResults) => {
-        try {
-            console.log('Saving match history:', { OcrId, matchResults }); // Debug log
-
-            const response = await fetch('http://localhost:4000/match-history', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    OcrId,
-                    matchResults: {
-                        matches: matchResults.matches,
-                        timestamp: matchResults.timestamp,
-                        topScore: matchResults.topScore,
-                        recommendedMatches: matchResults.recommendedMatches.map(match => ({
-                            score: match.score,
-                            matchedFields: match.matchedFields,
-                            confidence: match.confidence,
-                            matchDetails: match.matchDetails,
-                            isRecommended: match.isRecommended,
-                            claimId: match.claimId,
-                            claimNumber: match.claimNumber
-                        }))
-                    }
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(`Failed to save match history: ${errorData.message}`);
+    const transformMatchResults = useCallback((results) => {
+        return results.map(result => ({
+            score: result.score,
+            matches: {
+                matchedFields: result.matches?.matchedFields || [],
+                details: result.matches?.details || {},
+                confidence: result.matches?.confidence || {}
+            },
+            isRecommended: result.isRecommended || false,
+            claim: {
+                id: result.claim?.id,
+                claimNumber: result.claim?.claimNumber || '',
+                name: result.claim?.name || '',
+                date: result.claim?.date,
+                adjuster: result.claim?.adjuster || ''
             }
-            
-            const savedData = await response.json();
-            console.log('Match history saved successfully:', savedData); // Debug log
-            
-            await getMatchHistory(OcrId);
-        } catch (error) {
-            console.error('Error saving match history:', error);
-        }
-    };
-
-    const getMatchHistory = async (OcrId) => {
-        try {
-            const response = await fetch(`http://localhost:4000/ai/match-history/${OcrId}`);
-            if (!response.ok) throw new Error('Failed to fetch match history');
-            
-            const data = await response.json();
-            if (!data.matchHistory) {
-                throw new Error('Match history data not found');
-            }
-            
-            setMatchState(prev => ({
-                ...prev,
-                matchHistory: data.matchHistory
-            }));
-            
-            return data.matchHistory;
-        } catch (error) {
-            console.error('Error fetching match history:', error);
-            setMatchState(prev => ({
-                ...prev,
-                error: error.message
-            }));
-            return [];
-        }
-    };
+        }));
+    }, []);
 
     const findMatches = async (documentEntities) => {
         try {
             setMatchState(prev => ({ ...prev, loading: true }));
             
-            // Get basic results for AI Processor
-            const basicResults = await findMatchingClaims(documentEntities);
-            
-            // Transform the results for SuggestedClaims
-            const transformedResults = transformMatchResults(basicResults);
-            
-            // Calculate scores
-            const topScore = Math.max(...transformedResults.map(m => m.score || 0), 0);
-
-            // Prepare match history entry
-            const matchHistoryEntry = {
-                OcrId: documentEntities.OcrId,
-                matchResults: {
-                    matches: transformedResults,
-                    timestamp: new Date().toISOString(),
-                    topScore: topScore,
-                    recommendedMatches: transformedResults
-                        .filter(match => match.score >= 75)  // Consider matches above 75% as recommended
-                        .map(match => ({
-                            matchedFields: match.matchedFields || [],
-                            confidence: {
-                                claimNumber: match.confidence?.claimNumber || 0,
-                                name: match.confidence?.name || 0,
-                                employerName: match.confidence?.employerName || 0,
-                                dateOfInjury: match.confidence?.dateOfInjury || 0,
-                                physicianName: match.confidence?.physicianName || 0
-                            },
-                            matchDetails: match.matches?.details || {},
-                            isRecommended: true,
-                            claimId: match.claimId,
-                            claimNumber: match.claimNumber,
-                            score: match.score
-                        }))
-                }
-            };
-
-            // Save match history
-            if (documentEntities.OcrId) {
-                await saveMatchHistory(documentEntities.OcrId, matchHistoryEntry.matchResults);
-            }
-
-            setMatchState({
-                matches: basicResults,
-                detailedMatches: transformedResults,
-                totalMatches: transformedResults.length,
-                topScore,
-                loading: false,
-                error: null,
-                lastUpdated: new Date().toISOString()
+            // Process entities and find matches
+            const response = await fetch('http://localhost:4000/ai/process-matches', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ entities: documentEntities })
             });
 
-            // Fetch updated match history
-            await getMatchHistory(documentEntities.OcrId);
+            if (!response.ok) throw new Error('Failed to process matches');
+            
+            const data = await response.json();
+            const transformedMatches = transformMatchResults(data.matchResults);
+            
+            setMatchState(prev => ({
+                ...prev,
+                matches: data.matchResults,
+                detailedMatches: transformedMatches,
+                totalMatches: transformedMatches.length,
+                topScore: Math.max(...transformedMatches.map(m => m.score), 0),
+                loading: false,
+                lastUpdated: new Date().toISOString()
+            }));
 
         } catch (error) {
             console.error('Match finding error:', error);
@@ -153,12 +72,42 @@ export const MatchProvider = ({ children }) => {
         }
     };
 
+    const getMatchHistory = async (OcrId) => {
+        try {
+            setMatchState(prev => ({ ...prev, loading: true }));
+            
+            const response = await fetch(`http://localhost:4000/ai/suggested-claims/${OcrId}`);
+            if (!response.ok) throw new Error('Failed to fetch match history');
+            
+            const data = await response.json();
+            
+            const transformedMatches = transformMatchResults(data.matchResults || []);
+            
+            setMatchState(prev => ({
+                ...prev,
+                matchHistory: transformedMatches,
+                detailedMatches: transformedMatches,
+                loading: false,
+                lastUpdated: new Date().toISOString()
+            }));
+
+        } catch (error) {
+            console.error('Match history error:', error);
+            setMatchState(prev => ({
+                ...prev,
+                loading: false,
+                error: error.message,
+                matchHistory: [],
+                detailedMatches: []
+            }));
+        }
+    };
+
     return (
         <MatchContext.Provider value={{ 
             ...matchState, 
             findMatches,
-            getMatchHistory,
-            saveMatchHistory 
+            getMatchHistory
         }}>
             {children}
         </MatchContext.Provider>

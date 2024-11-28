@@ -1,14 +1,19 @@
 const MatchScoreIndicator = ({ score, matchDetails }) => {
-    const getMatchDetailsTooltip = () => {
-        if (!matchDetails) return '';
-        const matchedFields = matchDetails.matchedFields || [];
-        return matchedFields.join(', ');
-    };
-
     const getStatusClass = (score) => {
         if (score >= 75) return 'bg-green-500';
         if (score >= 50) return 'bg-yellow-500';
         return 'bg-red-500';
+    };
+
+    const getConfidenceColor = (confidence) => {
+        if (confidence > 0.8) return 'bg-gradient-to-r from-green-400 to-green-600';
+        if (confidence > 0.5) return 'bg-gradient-to-r from-yellow-400 to-yellow-600';
+        return 'bg-gradient-to-r from-red-400 to-red-600';
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return '';
+        return new Date(dateString).toLocaleDateString();
     };
 
     return (
@@ -18,13 +23,13 @@ const MatchScoreIndicator = ({ score, matchDetails }) => {
                 <div className="flex items-center group relative">
                     <div className="h-2.5 w-full bg-gray-200 rounded dark:bg-gray-700">
                         <div 
-                            className={`h-2.5 rounded ${getStatusClass(score)}`}
+                            className={`h-2.5 rounded ${getStatusClass(score)} transition-all duration-500`}
                             style={{ width: `${score}%` }}
                         ></div>
                     </div>
                     <span className="ml-2 font-medium">{score}%</span>
                     
-                    {/* Enhanced Tooltip with Quantum State Indicators */}
+                    {/* Detailed Tooltip */}
                     {matchDetails && (
                         <div className="invisible group-hover:visible absolute top-full left-0 mt-2 p-4 bg-gray-800 text-white text-xs rounded shadow-lg z-10 w-64">
                             <div className="mb-2">
@@ -40,18 +45,15 @@ const MatchScoreIndicator = ({ score, matchDetails }) => {
                                     ))}
                                 </div>
                             </div>
-                            {matchDetails.matchDetails && (
+                            
+                            {/* Confidence Indicators */}
+                            {matchDetails.confidence && (
                                 <div className="flex space-x-2 mt-2 border-t pt-2">
-                                    {Object.entries(matchDetails.matchDetails).map(([key, value]) => (
+                                    {Object.entries(matchDetails.confidence).map(([key, value]) => (
                                         <div key={key} className="relative group">
-                                            <div className={`w-3 h-3 rounded-full ${
-                                                value.matched 
-                                                    ? 'bg-gradient-to-r from-green-400 to-green-600' 
-                                                    : 'bg-gradient-to-r from-red-400 to-red-600'
-                                                } animate-pulse`}>
-                                            </div>
+                                            <div className={`w-3 h-3 rounded-full ${getConfidenceColor(value)} animate-pulse`}></div>
                                             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 hidden group-hover:block bg-black text-white text-xs rounded p-1 mb-1 whitespace-nowrap">
-                                                {key}: {value.score} points
+                                                {key}: {Math.round(value * 100)}%
                                             </div>
                                         </div>
                                     ))}
@@ -61,7 +63,7 @@ const MatchScoreIndicator = ({ score, matchDetails }) => {
                     )}
                 </div>
 
-                {/* Match Details Summary with Enhanced Information */}
+                {/* Match Summary Information */}
                 {matchDetails && (
                     <div className="text-xs space-y-2">
                         <div className="flex flex-wrap gap-2">
@@ -76,16 +78,25 @@ const MatchScoreIndicator = ({ score, matchDetails }) => {
                                 </span>
                             )}
                         </div>
-                        {matchDetails.claimantName && (
-                            <div className="text-gray-600">
-                                Claimant: {matchDetails.claimantName}
-                            </div>
-                        )}
-                        {matchDetails.dateOfInjury && (
-                            <div className="text-gray-600">
-                                Injury Date: {matchDetails.dateOfInjury}
-                            </div>
-                        )}
+                        
+                        {/* Additional Details */}
+                        <div className="space-y-1">
+                            {matchDetails.claimantName && (
+                                <div className="text-gray-600">
+                                    Claimant: {matchDetails.claimantName}
+                                </div>
+                            )}
+                            {matchDetails.dateOfInjury && (
+                                <div className="text-gray-600">
+                                    Injury Date: {formatDate(matchDetails.dateOfInjury)}
+                                </div>
+                            )}
+                            {matchDetails.physicianName && (
+                                <div className="text-gray-600">
+                                    Physician: {matchDetails.physicianName}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
