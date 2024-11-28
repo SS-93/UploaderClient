@@ -35,28 +35,30 @@ export const MatchProvider = ({ children }) => {
         }));
     }, []);
 
-    const findMatches = async (documentEntities) => {
+    const findMatches = async (entities) => {
         try {
-            setMatchState(prev => ({ ...prev, loading: true }));
+            setMatchState(prev => ({ ...prev, loading: true, error: null }));
             
-            // Process entities and find matches
             const response = await fetch('http://localhost:4000/ai/process-matches', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ entities: documentEntities })
+                body: JSON.stringify({ entities })
             });
 
-            if (!response.ok) throw new Error('Failed to process matches');
-            
+            if (!response.ok) {
+                throw new Error('Failed to process matches');
+            }
+
             const data = await response.json();
-            const transformedMatches = transformMatchResults(data.matchResults);
+            
+            const matchResults = data.matchResults || [];
             
             setMatchState(prev => ({
                 ...prev,
-                matches: data.matchResults,
-                detailedMatches: transformedMatches,
-                totalMatches: transformedMatches.length,
-                topScore: Math.max(...transformedMatches.map(m => m.score), 0),
+                matches: matchResults,
+                detailedMatches: matchResults,
+                totalMatches: data.totalMatches || 0,
+                topScore: data.topScore || 0,
                 loading: false,
                 lastUpdated: new Date().toISOString()
             }));
@@ -67,7 +69,8 @@ export const MatchProvider = ({ children }) => {
                 ...prev,
                 loading: false,
                 error: error.message,
-                lastUpdated: new Date().toISOString()
+                matches: [],
+                detailedMatches: []
             }));
         }
     };
