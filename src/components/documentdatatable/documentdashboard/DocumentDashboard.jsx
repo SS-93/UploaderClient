@@ -22,6 +22,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
   const [showMatchHistory, setShowMatchHistory] = useState(false);
   const [selectedDocMatchHistory, setSelectedDocMatchHistory] = useState(null);
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
 
   
   const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
@@ -370,6 +371,80 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     }
 };
 
+  const handleSelectAll = (e) => {
+    if (e.target.checked) {
+      setSelectedDocuments(allDocuments.map(doc => doc.OcrId));
+    } else {
+      setSelectedDocuments([]);
+    }
+  };
+
+  const handleSelectDocument = (e, OcrId) => {
+    e.stopPropagation(); // Prevent row click event
+    setSelectedDocuments(prev => {
+      if (prev.includes(OcrId)) {
+        return prev.filter(id => id !== OcrId);
+      } else {
+        return [...prev, OcrId];
+      }
+    });
+  };
+
+  const handleBulkSort = async (selectedIds) => {
+    try {
+      const response = await fetch('http://localhost:4000/dms/bulk-sort', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          documentIds: selectedIds,
+          autoSort: true,
+          minScore: 75 // You might want to make this configurable
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(`Successfully sorted ${result.success.length} documents`);
+        setSelectedDocuments([]); // Clear selection
+        // Refresh your document list
+        fetchNewlyUploadedDocuments();
+      } else {
+        throw new Error('Failed to sort documents');
+      }
+    } catch (error) {
+      console.error('Error in bulk sort:', error);
+      alert('Failed to sort documents: ' + error.message);
+    }
+  };
+
+  const handleBulkDelete = async (selectedIds) => {
+    if (window.confirm(`Are you sure you want to delete ${selectedIds.length} documents?`)) {
+      try {
+        const response = await fetch('http://localhost:4000/dms/bulk-delete', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ documentIds: selectedIds }),
+        });
+
+        if (response.ok) {
+          alert('Documents deleted successfully');
+          setSelectedDocuments([]); // Clear selection
+          // Refresh your document list
+          fetchNewlyUploadedDocuments();
+        } else {
+          throw new Error('Failed to delete documents');
+        }
+      } catch (error) {
+        console.error('Error in bulk delete:', error);
+        alert('Failed to delete documents: ' + error.message);
+      }
+    }
+  };
+
   return (
     <div>
       {showLoadingBar ? (
@@ -461,6 +536,23 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                 <table className="min-w-full text-sm text-left text-gray-500 dark:text-gray-400">
                   <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400 w-full">
                     <tr>
+                      <th scope="col" className="px-4 py-3">
+                        <div className="flex items-center">
+                          <input
+                            id="select-all-checkbox"
+                            type="checkbox"
+                            aria-label="Select all documents"
+                            title="Select all documents"
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                            checked={selectedDocuments.length === allDocuments.length} 
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={handleSelectAll} 
+                          />
+                          <div className="flex items-center gap-2">
+                              <span className="pl-3 text-[10px] text-gray-400 dark:text-gray-500">Select All</span>
+                          </div>
+                        </div>
+                      </th>
                       <th scope="col" className="px-4 py-3">Document Name</th>
                       <th scope="col" className="px-4 py-3">Date Uploaded</th>
                       <th scope="col" className="px-4 py-3">Uploader</th>
@@ -476,14 +568,29 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                 {allDocuments.map((doc) => (
                   <tr 
                     key={doc.OcrId}
-                    className={`document-row ${selectedDocumentId === doc.OcrId ? 'document-row-selected' : ''}`}
-                    // onClick={() => handleRowClick(doc.OcrId)}
+                    className={`document-row ${
+                      selectedDocumentId === doc.OcrId ? 'document-row-selected' : ''
+                    } ${
+                      selectedDocuments.includes(doc.OcrId) ? 'bg-blue-50 dark:bg-blue-900' : ''
+                    }`}
                     onClick={() => handleRowClickII(doc)}
                     style={{
                       transition: 'background-color 0.2s ease-in-out',
                       cursor: 'pointer'
                     }}
                   >
+                    <td className="px-4 py-3">
+                      <div className="flex items-center">
+                        <input
+                          id={`checkbox-${doc.OcrId}`}
+                          type="checkbox"
+                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
+                          checked={selectedDocuments.includes(doc.OcrId)}
+                          onChange={(e) => handleSelectDocument(e, doc.OcrId)}
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    </td>
                     <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                       {(isEditing || isEditingMultiple) ? (
                         <input
