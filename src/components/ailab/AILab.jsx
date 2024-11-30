@@ -10,6 +10,7 @@ function AILab() {
     const [ocrText, setOcrText] = useState('');
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [matchResults, setMatchResults] = useState([]);
+    const [processingEnabled, setProcessingEnabled] = useState(true);
 
     const { 
         findMatches,
@@ -18,13 +19,17 @@ function AILab() {
         error 
     } = useContext(MatchContext);
 
+    const handleProcessingToggle = () => {
+        setProcessingEnabled(!processingEnabled);
+    };
+
     const handleSelectDocument = async (documentData) => {
         console.log('AILab received document:', documentData);
         
         setSelectedOcrId(documentData.OcrId);
         setSelectedDocument(documentData);
         
-        if (documentData.OcrId) {
+        if (documentData.OcrId && processingEnabled) {
             try {
                 // If document already has text content, use it
                 if (documentData.textContent) {
@@ -59,9 +64,6 @@ function AILab() {
                 console.error('Error in handleSelectDocument:', error);
                 setOcrText({ textContent: 'Failed to load OCR text' });
             }
-        } else {
-            setOcrText(null);
-            setSelectedDocument(null);
         }
     };
 
@@ -148,10 +150,24 @@ function AILab() {
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-2xl font-bold mb-6">AI Lab</h1>
             
+            <div className="mb-4 flex justify-end">
+                <button
+                    onClick={handleProcessingToggle}
+                    className={`px-4 py-2 rounded-lg font-medium ${
+                        processingEnabled 
+                            ? 'bg-red-500 hover:bg-red-600 text-white' 
+                            : 'bg-green-500 hover:bg-green-600 text-white'
+                    }`}
+                >
+                    {processingEnabled ? 'Stop Processing' : 'Start Processing'}
+                </button>
+            </div>
+
             <div className="grid grid-cols-1 gap-6">
                 <AiProcessor 
                     selectedOcrId={selectedOcrId}
                     ocrText={ocrText}
+                    processingEnabled={processingEnabled}
                 />
                 
                 {selectedDocument && (
@@ -159,14 +175,21 @@ function AILab() {
                         selectedDocument={selectedDocument}
                         matchResults={matchResults}
                         fileName={selectedDocument?.fileName}
+                        processingEnabled={processingEnabled}
                     />
                 )}
                 
                 <DocumentDashboard
                     onSelectDocument={handleSelectDocument}
                     onSelectDocumentII={(doc) => {
-                        handleSelectDocumentII(doc);
-                        handleDocumentForSuggestions(doc);
+                        if (processingEnabled) {
+                            handleSelectDocumentII(doc);
+                            handleDocumentForSuggestions(doc);
+                        } else {
+                            // Just update selected document without processing
+                            setSelectedDocument(doc);
+                            setSelectedOcrId(doc.OcrId);
+                        }
                     }}
                 />
             </div>

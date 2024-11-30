@@ -5,7 +5,7 @@ import AllClaims from '../allclaims/AllClaims';
 import SuggestedClaims from '../suggestedclaims/SuggestedClaims';
 import MatchDetails from '../claimquerymatrix/MatchDetails';
 
-function AiProcessor({ selectedOcrId, ocrText }) {
+function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
   const [entities, setEntities] = useState(null);
   const [editableEntities, setEditableEntities] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -24,7 +24,7 @@ function AiProcessor({ selectedOcrId, ocrText }) {
   }, [ocrText, selectedOcrId]);
 
   useEffect(() => {
-    if (ocrText) {
+    if (ocrText && processingEnabled) {
       setIsLoading(true);
       const textToProcess = typeof ocrText === 'object' ? 
         ocrText.textContent || '' : 
@@ -53,7 +53,7 @@ function AiProcessor({ selectedOcrId, ocrText }) {
       setEditableEntities(null);
       setMatchResults([]);
     }
-  }, [ocrText, selectedOcrId]);
+  }, [ocrText, selectedOcrId, processingEnabled]);
 
   useEffect(() => {
     if (entities) {

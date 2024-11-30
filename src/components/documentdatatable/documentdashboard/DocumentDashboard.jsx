@@ -23,6 +23,8 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   const [showMatchHistory, setShowMatchHistory] = useState(false);
   const [selectedDocMatchHistory, setSelectedDocMatchHistory] = useState(null);
   const [selectedDocuments, setSelectedDocuments] = useState([]);
+  const [isBulkProcessing, setIsBulkProcessing] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
 
   
   const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
@@ -371,16 +373,13 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     }
 };
 
-  const handleSelectAll = (e) => {
-    if (e.target.checked) {
-      setSelectedDocuments(allDocuments.map(doc => doc.OcrId));
-    } else {
-      setSelectedDocuments([]);
-    }
+  const handleSelectAll = () => {
+    setSelectedDocuments(prev => 
+      prev.length === documents.length ? [] : documents.map(doc => doc.OcrId)
+    );
   };
 
-  const handleSelectDocument = (e, OcrId) => {
-    e.stopPropagation(); // Prevent row click event
+  const handleSelectDocument = (OcrId) => {
     setSelectedDocuments(prev => {
       if (prev.includes(OcrId)) {
         return prev.filter(id => id !== OcrId);
@@ -468,12 +467,20 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                   </form>
                 </div>
                 <div className="w-full md:w-auto flex flex-col md:flex-row space-y-2 md:space-y-0 items-stretch md:items-center justify-end md:space-x-3 flex-shrink-0">
-                  <button
-                    className="flex items-center justify-center text-white bg-green-600 hover:bg-green-300 focus:ring-4 focus:ring-green-200 font-medium rounded-lg text-sm px-4 py-2"
-                    onClick={() => setShowBulkUpload(!showBulkUpload)}
-                  >
-                    + Bulk Upload
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                        onClick={() => setSelectionMode(!selectionMode)}
+                        className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+                    >
+                        {selectionMode ? 'Exit Selection' : 'Select Documents'}
+                    </button>
+                    <button
+                        className="flex items-center justify-center text-white bg-green-600 hover:bg-green-300 focus:ring-4 focus:ring-green-200 font-medium rounded-lg text-sm px-4 py-2"
+                        onClick={() => setShowBulkUpload(!showBulkUpload)}
+                    >
+                        + Bulk Upload
+                    </button>
+                  </div>
                   <button
                     className="flex items-center justify-center text-white bg-blue-200 focus:ring-4 focus:ring-blue-800 font-medium rounded-lg text-sm px-4 py-2"
                     onClick={handleEditClick}
@@ -539,14 +546,10 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                       <th scope="col" className="px-4 py-3">
                         <div className="flex items-center">
                           <input
-                            id="select-all-checkbox"
                             type="checkbox"
-                            aria-label="Select all documents"
-                            title="Select all documents"
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                            checked={selectedDocuments.length === allDocuments.length} 
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={handleSelectAll} 
+                            checked={selectedDocuments.length === documents.length}
+                            onChange={handleSelectAll}
+                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
                           />
                           <div className="flex items-center gap-2">
                               <span className="pl-3 text-[10px] text-gray-400 dark:text-gray-500">Select All</span>
@@ -565,7 +568,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                     </tr>
                   </thead>
                   <tbody>
-                {allDocuments.map((doc) => (
+                {documents.map((doc) => (
                   <tr 
                     key={doc.OcrId}
                     className={`document-row ${
@@ -573,24 +576,27 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                     } ${
                       selectedDocuments.includes(doc.OcrId) ? 'bg-blue-50 dark:bg-blue-900' : ''
                     }`}
-                    onClick={() => handleRowClickII(doc)}
+                    onClick={(e) => {
+                      // Prevent row click when clicking checkbox
+                      if (e.target.type !== 'checkbox') {
+                        handleRowClickII(doc);
+                      }
+                    }}
                     style={{
                       transition: 'background-color 0.2s ease-in-out',
                       cursor: 'pointer'
                     }}
                   >
-                    <td className="px-4 py-3">
-                      <div className="flex items-center">
-                        <input
-                          id={`checkbox-${doc.OcrId}`}
-                          type="checkbox"
-                          className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600"
-                          checked={selectedDocuments.includes(doc.OcrId)}
-                          onChange={(e) => handleSelectDocument(e, doc.OcrId)}
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                    </td>
+                    {selectionMode && (
+                        <td className="px-4 py-2">
+                            <input 
+                                type="checkbox"
+                                checked={selectedDocuments.includes(doc.OcrId)}
+                                onChange={() => handleSelectDocument(doc.OcrId)}
+                                className="rounded border-gray-300"
+                            />
+                        </td>
+                    )}
                     <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                       {(isEditing || isEditingMultiple) ? (
                         <input
