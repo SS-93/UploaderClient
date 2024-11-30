@@ -11,6 +11,7 @@ function AILab() {
     const [selectedDocument, setSelectedDocument] = useState(null);
     const [matchResults, setMatchResults] = useState([]);
     const [processingEnabled, setProcessingEnabled] = useState(true);
+    const [selectedDocuments, setSelectedDocuments] = useState([]);
 
     const { 
         findMatches,
@@ -146,6 +147,15 @@ function AILab() {
         }
     };
 
+    const handleDocumentsSelection = (documents) => {
+        setSelectedDocuments(documents);
+        if (processingEnabled) {
+            documents.forEach(doc => {
+                handleDocumentForSuggestions(doc);
+            });
+        }
+    };
+
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-2xl font-bold mb-6">AI Lab</h1>
@@ -170,14 +180,13 @@ function AILab() {
                     processingEnabled={processingEnabled}
                 />
                 
-                {selectedDocument && (
-                    <SuggestedClaims 
-                        selectedDocument={selectedDocument}
-                        matchResults={matchResults}
-                        fileName={selectedDocument?.fileName}
-                        processingEnabled={processingEnabled}
-                    />
-                )}
+                <SuggestedClaims 
+                    selectedDocument={selectedDocument}
+                    selectedDocuments={selectedDocuments}
+                    matchResults={matchResults}
+                    fileName={selectedDocument?.fileName}
+                    processingEnabled={processingEnabled}
+                />
                 
                 <DocumentDashboard
                     onSelectDocument={handleSelectDocument}
@@ -186,11 +195,11 @@ function AILab() {
                             handleSelectDocumentII(doc);
                             handleDocumentForSuggestions(doc);
                         } else {
-                            // Just update selected document without processing
                             setSelectedDocument(doc);
                             setSelectedOcrId(doc.OcrId);
                         }
                     }}
+                    onSelectionChange={handleDocumentsSelection}
                 />
             </div>
 

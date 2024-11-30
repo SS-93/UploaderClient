@@ -22,6 +22,9 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
     const [selectedDetails, setSelectedDetails] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
+    // Add new state for tracking checked documents
+    const [checkedDocuments, setCheckedDocuments] = useState([]);
+
     // Handle single document selection (maintain existing functionality)
     useEffect(() => {
         if (selectedDocument?.OcrId) {
@@ -152,148 +155,186 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         );
     };
 
+    // Add renderCheckedDocuments function
+    const renderCheckedDocuments = () => {
+        return selectedDocuments.map((doc) => {
+            const docResults = batchResults[doc.OcrId] || {};
+            const bestMatch = docResults.matches?.[0] || {};
+            
+            return (
+                <tr key={doc.OcrId} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                    <th scope="row" className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                        {doc.fileName || 'Unnamed Document'}
+                    </th>
+                    <td className="px-6 py-4">
+                        <span className={`px-2 py-1 rounded-full text-sm ${
+                            bestMatch.score >= 75 ? 'bg-green-100 text-green-800' :
+                            bestMatch.score >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                        }`}>
+                            Score: {bestMatch.score || 0}%
+                        </span>
+                    </td>
+                    <td className="px-6 py-4">
+                        {bestMatch.claim?.claimNumber || 'No match'}
+                    </td>
+                    <td className="px-6 py-4">
+                        {batchProcessing[doc.OcrId] ? (
+                            <span className="text-yellow-500">Processing...</span>
+                        ) : docResults.processed ? (
+                            <span className="text-green-500">Complete</span>
+                        ) : (
+                            <span className="text-gray-500">Pending</span>
+                        )}
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                        <button 
+                            onClick={() => viewDetails(doc.OcrId)}
+                            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                        >
+                            Details
+                        </button>
+                    </td>
+                </tr>
+            );
+        });
+    };
+
+    // Update table header to include bulk sort
+    const renderTableHeader = () => (
+        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+            <tr>
+                <th scope="col" className="px-6 py-3">Document</th>
+                <th scope="col" className="px-6 py-3">Match Score</th>
+                <th scope="col" className="px-6 py-3">Best Match</th>
+                <th scope="col" className="px-6 py-3">Status</th>
+                <th scope="col" className="px-6 py-3">
+                    <div className="flex items-center justify-between">
+                        <span>Actions</span>
+                        {selectedDocuments.length > 0 && (
+                            <button
+                                onClick={handleBulkSort}
+                                className="ml-2 bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
+                            >
+                                Bulk Sort
+                            </button>
+                        )}
+                    </div>
+                </th>
+            </tr>
+        </thead>
+    );
+
+    // Add bulk sort handler
+    const handleBulkSort = async () => {
+        if (!selectedDocuments.length) return;
+        
+        try {
+            const response = await fetch('http://localhost:4000/dms/bulk-sort', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    documentIds: selectedDocuments.map(doc => doc.OcrId),
+                    autoSort: true,
+                    minScore: 75
+                }),
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                alert(`Successfully sorted ${result.success.length} documents`);
+            } else {
+                throw new Error('Failed to sort documents');
+            }
+        } catch (error) {
+            console.error('Error in bulk sort:', error);
+            alert('Failed to sort documents: ' + error.message);
+        }
+    };
+
+    // Add renderSingleDocument function
+    const renderSingleDocument = () => {
+        if (!selectedDocument) return null;
+
+        const bestMatch = getBestMatch();
+
+        return (
+            <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                <th scope="row" className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                    {selectedDocument.fileName || 'Unnamed Document'}
+                </th>
+                <td className="px-6 py-4">
+                    <MatchScoreIndicator 
+                        score={bestMatch?.score || 0}
+                        matchDetails={{
+                            isRecommended: bestMatch?.isRecommended || false,
+                            matchedFields: bestMatch?.matches?.matchedFields || [],
+                            confidence: bestMatch?.matches?.confidence || {},
+                            claimNumber: bestMatch?.claim?.claimNumber || '',
+                            claimantName: bestMatch?.claim?.name || '',
+                            dateOfInjury: bestMatch?.claim?.date || '',
+                            physicianName: bestMatch?.claim?.physicianName || ''
+                        }}
+                    />
+                </td>
+                <td className="px-6 py-4">
+                    {bestMatch?.claim?.claimNumber || 'No match'}
+                </td>
+                <td className="px-6 py-4">
+                    {loading ? (
+                        <span className="text-yellow-500">Processing...</span>
+                    ) : error ? (
+                        <span className="text-red-500">Error</span>
+                    ) : (
+                        <span className="text-green-500">Ready</span>
+                    )}
+                </td>
+                <td className="px-6 py-4 text-right">
+                    <button 
+                        onClick={() => viewDetails(selectedDocument.OcrId)}
+                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                    >
+                        Details
+                    </button>
+                </td>
+            </tr>
+        );
+    };
+
     return (
         <div className="bg-gray-50 dark:bg-gray-800 relative overflow-hidden shadow-md sm:rounded-lg">
             {/* Header Section */}
             <div className="flex items-center justify-between p-4">
                 <div>
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                        {selectedDocuments.length > 0 ? 'Batch Processing Results' : 'Suggested Claims'}
+                        {selectedDocuments.length > 0 ? 'Selected Documents' : 'Document Details'}
                     </h2>
                     <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                         {selectedDocuments.length > 0 
-                            ? `Processing ${selectedDocuments.length} documents`
-                            : 'Match results for selected document'
+                            ? `${selectedDocuments.length} documents selected`
+                            : 'Single document view'
                         }
                     </p>
                 </div>
-                {selectedDocuments.length > 0 && processingEnabled && (
-                    <button
-                        onClick={() => processBatchDocuments(selectedDocuments)}
-                        className="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700 transition-colors"
-                        disabled={Object.values(batchProcessing).some(Boolean)}
-                    >
-                        {Object.values(batchProcessing).some(Boolean) 
-                            ? 'Processing...' 
-                            : 'Process All'
-                        }
-                    </button>
-                )}
             </div>
 
             {/* Results Table */}
             <div className="relative overflow-x-auto">
                 <table className="w-full text-sm text-left text-gray-500 dark:text-gray-400">
-                    <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
-                        <tr>
-                            <th scope="col" className="px-6 py-3">Document</th>
-                            <th scope="col" className="px-6 py-3">Match Score</th>
-                            <th scope="col" className="px-6 py-3">Best Match</th>
-                            <th scope="col" className="px-6 py-3">Status</th>
-                            <th scope="col" className="px-6 py-3">Actions</th>
-                        </tr>
-                    </thead>
+                    {renderTableHeader()}
                     <tbody>
-                        {/* Single Document View */}
-                        {selectedDocument && !selectedDocuments.length && (
-                            <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                                <th scope="row" className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                    {selectedDocument.fileName || 'Unnamed Document'}
-                                </th>
-                                <MatchScoreIndicator 
-                                    score={getBestMatch()?.score || 0}
-                                    matchDetails={{
-                                        isRecommended: getBestMatch()?.isRecommended || false,
-                                        matchedFields: getBestMatch()?.matches?.matchedFields || [],
-                                        confidence: getBestMatch()?.matches?.confidence || {},
-                                        claimNumber: getBestMatch()?.claim?.claimNumber || '',
-                                        claimantName: getBestMatch()?.claim?.name || '',
-                                        dateOfInjury: getBestMatch()?.claim?.date || '',
-                                        physicianName: getBestMatch()?.matches?.details?.physicianName || ''
-                                    }}
-                                />
-                                <td className="px-6 py-4">
-                                    {selectedDocument.category || 'Unspecified'}
-                                </td>
-                                <td className="px-6 py-4">
-                                    {loading ? (
-                                        <span className="text-yellow-500">Processing...</span>
-                                    ) : error ? (
-                                        <span className="text-red-500">Error</span>
-                                    ) : (
-                                        <span className="text-green-500">Ready</span>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4 text-right">
-                                    <button className="font-medium text-blue-600 dark:text-blue-500 hover:underline">
-                                        Details
-                                    </button>
-                                </td>
-                            </tr>
-                        )}
-
-                        {/* Batch Processing View */}
-                        {selectedDocuments.map(doc => (
-                            <tr key={doc.OcrId} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                                    {doc.fileName || 'Unnamed Document'}
-                                </td>
-                                <td className="px-6 py-4">
-                                    {batchResults[doc.OcrId]?.topScore 
-                                        ? <MatchScoreIndicator 
-                                            score={batchResults[doc.OcrId].topScore}
-                                            matchDetails={batchResults[doc.OcrId].matches[0] || {}}
-                                          />
-                                        : '-'
-                                    }
-                                </td>
-                                <td className="px-6 py-4">
-                                    {batchResults[doc.OcrId]?.matches?.[0]?.claim?.claimNumber || 'No match'}
-                                </td>
-                                <td className="px-6 py-4">
-                                    {batchProcessing[doc.OcrId] ? (
-                                        <span className="text-yellow-500">Processing...</span>
-                                    ) : batchResults[doc.OcrId]?.error ? (
-                                        <span className="text-red-500">Error</span>
-                                    ) : batchResults[doc.OcrId]?.processed ? (
-                                        <span className="text-green-500">Complete</span>
-                                    ) : (
-                                        <span className="text-gray-500">Pending</span>
-                                    )}
-                                </td>
-                                <td className="px-6 py-4">
-                                    <button 
-                                        onClick={() => viewDetails(doc.OcrId)}
-                                        className="text-blue-600 hover:underline"
-                                    >
-                                        View Details
-                                    </button>
-                                </td>
-                            </tr>
-                        ))}
+                        {selectedDocuments.length > 0 
+                            ? renderCheckedDocuments()
+                            : renderSingleDocument()
+                        }
                     </tbody>
                 </table>
             </div>
 
-            {/* Match History Section - Show only for single document */}
-            {selectedDocument && !selectedDocuments.length && matchHistory.length > 0 && (
-                <div className="mt-4 p-4">
-                    <h3 className="text-lg font-semibold mb-2">Match History</h3>
-                    <div className="space-y-2">
-                        {matchHistory.map((match, index) => (
-                            <div key={index} className="p-2 bg-white rounded shadow">
-                                <p>Score: {match.score}%</p>
-                                <p>Date: {new Date(match.matchDate).toLocaleDateString()}</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
-
             {/* Details Modal */}
-            {showDetailsModal && (
-                <DetailsModal />
-            )}
+            {showDetailsModal && <DetailsModal />}
         </div>
     );
 };

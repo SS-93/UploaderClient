@@ -4,7 +4,7 @@ import DocumentViewer from '../../documentviewer/DocumentViewer';
 import TextModule from '../../textmodule/TextModule';
 import './DashboardII.css'
 
-function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument }) {
+function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
   const [parkedDocuments, setParkedDocuments] = useState([]);
@@ -373,19 +373,34 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     }
 };
 
-  const handleSelectAll = () => {
-    setSelectedDocuments(prev => 
-      prev.length === documents.length ? [] : documents.map(doc => doc.OcrId)
+  const handleSelectAll = (e) => {
+    const newSelection = e.target.checked ? documents.map(doc => doc.OcrId) : [];
+    setSelectedDocuments(newSelection);
+    
+    // Find full document objects for selected IDs
+    const selectedDocs = documents.filter(doc => 
+        newSelection.includes(doc.OcrId)
     );
+    
+    // Notify parent component of selection change
+    onSelectionChange(selectedDocs);
   };
 
-  const handleSelectDocument = (OcrId) => {
+  const handleSelectDocument = (ocrId) => {
     setSelectedDocuments(prev => {
-      if (prev.includes(OcrId)) {
-        return prev.filter(id => id !== OcrId);
-      } else {
-        return [...prev, OcrId];
-      }
+        const newSelection = prev.includes(ocrId)
+            ? prev.filter(id => id !== ocrId)
+            : [...prev, ocrId];
+        
+        // Find full document objects for selected IDs
+        const selectedDocs = documents.filter(doc => 
+            newSelection.includes(doc.OcrId)
+        );
+        
+        // Notify parent component of selection change
+        onSelectionChange(selectedDocs);
+        
+        return newSelection;
     });
   };
 
