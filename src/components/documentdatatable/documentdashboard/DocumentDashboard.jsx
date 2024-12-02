@@ -459,6 +459,33 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     }
   };
 
+  const handleDocumentSelection = async (document) => {
+    setSelectedDocuments(prev => [...prev, document]);
+
+    try {
+        const response = await fetch('http://localhost:4000/ai/ner', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: document.textContent, OcrId: document.OcrId })
+        });
+
+        if (!response.ok) throw new Error('NER extraction failed');
+
+        const { entities } = await response.json();
+        document.entities = entities;
+
+        // Auto-save extracted entities
+        await fetch('http://localhost:4000/ai/save-entities', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ OcrId: document.OcrId, entities })
+        });
+
+    } catch (error) {
+        console.error('Error during NER extraction:', error);
+    }
+  };
+
   return (
     <div>
       {showLoadingBar ? (

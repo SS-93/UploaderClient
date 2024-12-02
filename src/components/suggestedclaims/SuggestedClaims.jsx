@@ -1,6 +1,7 @@
 import React, { useEffect, useContext, useCallback, useState, memo } from 'react';
 import MatchScoreIndicator from './MatchScoreIndicator';
 import { MatchContext } from '../matchcontext/MatchContext';
+import BatchProcessingStatus from './BatchProcessingStatus';
 
 const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingEnabled }) => {
     const { 
@@ -11,12 +12,19 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         getMatchHistory,
         matchHistory,
         lastUpdated,                
-        saveMatchHistory
+        saveMatchHistory,
+        processBatch
     } = useContext(MatchContext);
 
     // Add states for batch processing
-    const [batchProcessing, setBatchProcessing] = useState({});
-    const [batchResults, setBatchResults] = useState({});
+    const [batchProcessing, setBatchProcessing] = useState(false);
+    const [batchId, setBatchId] = useState(null);
+    const [batchResults, setBatchResults] = useState({
+        processed: 0,
+        total: 0,
+        success: [],
+        failed: []
+    });
 
     // Add new state for details modal
     const [selectedDetails, setSelectedDetails] = useState(null);
@@ -303,6 +311,61 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         );
     };
 
+    const handleBatchProcess = async () => {
+        if (!selectedDocuments.length || batchProcessing) return;
+
+        try {
+            setBatchProcessing(true);
+            setBatchResults({
+                processed: 0,
+                total: selectedDocuments.length,
+                success: [],
+                failed: []
+            });
+
+            const response = await processBatch(
+                selectedDocuments.map(doc => doc.OcrId)
+            );
+
+            setBatchId(response.batchId);
+            startStatusPolling(response.batchId);
+
+        } catch (error) {
+            console.error('Batch processing error:', error);
+            // Show error notification
+        }
+    };
+
+    const startStatusPolling = (batchId) => {
+        const pollInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`http://localhost:4000/ai/batch-status/${batchId}`);
+                const status = await response.json();
+
+                setBatchResults({
+                    processed: status.processed,
+                    total: status.total,
+                    success: status.success,
+                    failed: status.failed
+                });
+
+                if (!status.inProgress) {
+                    clearInterval(pollInterval);
+                    setBatchProcessing(false);
+                }
+            } catch (error) {
+                console.error('Status polling error:', error);
+                clearInterval(pollInterval);
+                setBatchProcessing(false);
+            }
+        }, 2000); // Poll every 2 seconds
+    };
+
+    const handleCancelBatch = async () => {
+        // Implement cancel logic if needed
+        setBatchProcessing(false);
+    };
+
     return (
         <div className="bg-gray-50 dark:bg-gray-800 relative overflow-hidden shadow-md sm:rounded-lg">
             {/* Header Section */}
@@ -335,6 +398,32 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
 
             {/* Details Modal */}
             {showDetailsModal && <DetailsModal />}
+
+            {/* Batch Processing Controls */}
+            {selectedDocuments.length > 0 && (
+                <div className="mb-4">
+                    <button
+                        onClick={handleBatchProcess}
+                        disabled={batchProcessing}
+                        className={`px-4 py-2 rounded-lg font-medium ${
+                            batchProcessing 
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-blue-500 hover:bg-blue-600 text-white'
+                        }`}
+                    >
+                        {batchProcessing ? 'Processing...' : 'Process Selected'}
+                    </button>
+                </div>
+            )}
+
+            {/* Batch Status */}
+            {(batchProcessing || batchResults.processed > 0) && (
+                <BatchProcessingStatus
+                    batchResults={batchResults}
+                    isProcessing={batchProcessing}
+                    onCancel={handleCancelBatch}
+                />
+            )}
         </div>
     );
 };

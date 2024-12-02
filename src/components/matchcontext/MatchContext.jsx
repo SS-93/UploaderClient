@@ -106,11 +106,40 @@ export const MatchProvider = ({ children }) => {
         }
     };
 
+    const processBatch = async (documents, minScore = 75) => {
+        try {
+            setMatchState(prev => ({ ...prev, loading: true, error: null }));
+            
+            const response = await fetch('http://localhost:4000/ai/auto-sort-batch', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ documents, minScore })
+            });
+
+            if (!response.ok) throw new Error('Failed to process batch');
+            
+            const data = await response.json();
+            return data.results;
+
+        } catch (error) {
+            console.error('Batch processing error:', error);
+            setMatchState(prev => ({
+                ...prev,
+                loading: false,
+                error: error.message
+            }));
+            throw error;
+        } finally {
+            setMatchState(prev => ({ ...prev, loading: false }));
+        }
+    };
+
     return (
         <MatchContext.Provider value={{ 
             ...matchState, 
             findMatches,
-            getMatchHistory
+            getMatchHistory,
+            processBatch
         }}>
             {children}
         </MatchContext.Provider>
