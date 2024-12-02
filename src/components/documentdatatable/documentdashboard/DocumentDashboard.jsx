@@ -1,10 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import LoadingBar from '../../loadingbar/LoadingBar';
 import DocumentViewer from '../../documentviewer/DocumentViewer';
 import TextModule from '../../textmodule/TextModule';
 import './DashboardII.css'
+import PropTypes from 'prop-types';
+import SuggestedClaims from '../../suggestedclaims/SuggestedClaims';
+import { findMatchingClaims } from '../../../utils/matchingLogic';
 
-function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange }) {
+function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange, processingEnabled, selectedDocument, setSelectedDocument }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
   const [parkedDocuments, setParkedDocuments] = useState([]);
@@ -25,6 +28,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
+  const [matchResults, setMatchResults] = useState({});
 
   
   const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
@@ -459,31 +463,98 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     }
   };
 
-  const handleDocumentSelection = async (document) => {
-    setSelectedDocuments(prev => [...prev, document]);
-
-    try {
-        const response = await fetch('http://localhost:4000/ai/ner', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text: document.textContent, OcrId: document.OcrId })
-        });
-
-        if (!response.ok) throw new Error('NER extraction failed');
-
-        const { entities } = await response.json();
-        document.entities = entities;
-
-        // Auto-save extracted entities
-        await fetch('http://localhost:4000/ai/save-entities', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ OcrId: document.OcrId, entities })
-        });
-
-    } catch (error) {
-        console.error('Error during NER extraction:', error);
+  const handleDocumentSelection = (document, isSelected) => {
+    // Validate document before processing
+    if (!document.OcrId) {
+        console.error('Invalid document data:', document);
+        return;
     }
+
+    setSelectedDocuments(prev => {
+        if (isSelected) {
+            // Add to selection if not already present
+            return prev.some(doc => doc.OcrId === document.OcrId) 
+                ? prev 
+                : [...prev, document];
+        } else {
+            // Remove from selection
+            return prev.filter(doc => doc.OcrId !== document.OcrId);
+        }
+    });
+
+    // Notify parent component with valid document data only
+    onSelectionChange(document);
+  };
+
+  const handleCheckboxChange = (e, document) => {
+    const isChecked = e.target.checked;
+    handleDocumentSelection(document, isChecked);
+  };
+
+  const handleSelectionChange = useCallback((selectedIds) => {
+    const selectedDocs = documents.filter(doc => selectedIds.includes(doc.OcrId));
+    setSelectedDocuments(selectedDocs);
+    onSelectionChange?.(selectedDocs);
+  }, [documents, onSelectionChange]);
+
+  const handleDocumentForSuggestions = async (document) => {
+    try {
+        const normalizedDocument = {
+            OcrId: document.OcrId,
+            fileName: document.fileName || 'Untitled Document',
+            category: document.category || 'Uncategorized',
+            uploadDate: document.uploadDate || new Date().toISOString(),
+            textContent: document.textContent || ''
+        };
+
+        // Call the parent's onSelectDocument with normalized data
+        onSelectDocument?.(normalizedDocument);
+    } catch (error) {
+        console.error('Error processing document for suggestions:', error);
+    }
+  };
+
+  // Use useEffect instead of direct calls
+  useEffect(() => {
+    if (selectedDocuments.length > 0 && processingEnabled) {
+        selectedDocuments.forEach(doc => {
+            handleDocumentForSuggestions(doc);
+        });
+    }
+  }, [selectedDocuments, processingEnabled]);
+
+  const handleDocumentClick = (document) => {
+    if (!document.OcrId) {
+        console.error('Document OcrId is undefined');
+        return;
+    }
+    setSelectedDocument(document);
+  };
+
+  useEffect(() => {
+    if (selectedDocument && selectedDocument.OcrId) {
+        console.log('AILab received document:', selectedDocument);
+        // Proceed with processing
+    } else {
+        console.error('Invalid document data:', selectedDocument);
+    }
+  }, [selectedDocument]);
+
+  const handleDocumentSelect = async (document) => {
+    // If document is already processed, use cached results
+    if (!matchResults[document.OcrId]) {
+        try {
+            const results = await findMatchingClaims(document.entities);
+            setMatchResults(prev => ({
+                ...prev,
+                [document.OcrId]: results
+            }));
+        } catch (error) {
+            console.error('Error processing document:', error);
+        }
+    }
+    
+    setSelectedDocuments(prev => [...prev, document]);
   };
 
   return (
@@ -794,8 +865,24 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
           </div>
         </div>
       )}
+
+      <SuggestedClaims 
+        selectedDocuments={selectedDocuments}
+        matchResults={Object.values(matchResults)}
+      />
     </div>
   );
 }
+
+DocumentDashboard.propTypes = {
+    onSelectDocument: PropTypes.func,
+    onSelectDocumentII: PropTypes.func,
+    onSelectionChange: PropTypes.func,
+    processingEnabled: PropTypes.bool
+};
+
+DocumentDashboard.defaultProps = {
+    processingEnabled: false
+};
 
 export default DocumentDashboard;

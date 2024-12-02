@@ -1,4 +1,4 @@
-import React, { useState, useContext } from 'react';
+import React, { useState, useContext, useEffect } from 'react';
 import { MatchContext } from '../matchcontext/MatchContext';
 import AiProcessor from '../aiprocessor/AiProcessor';
 import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDashboard';
@@ -156,6 +156,21 @@ function AILab() {
         }
     };
 
+    const handleDocumentClick = (document) => {
+        if (!document.OcrId) {
+            console.error('Document OcrId is undefined');
+            return;
+        }
+        setSelectedDocument(document);
+    };
+
+    useEffect(() => {
+        if (selectedDocument) {
+            console.log('AILab received document:', selectedDocument);
+            // Trigger processing
+        }
+    }, [selectedDocument]);
+
     return (
         <div className="container mx-auto px-4 py-8">
             <h1 className="text-2xl font-bold mb-6">AI Lab</h1>
@@ -190,16 +205,9 @@ function AILab() {
                 
                 <DocumentDashboard
                     onSelectDocument={handleSelectDocument}
-                    onSelectDocumentII={(doc) => {
-                        if (processingEnabled) {
-                            handleSelectDocumentII(doc);
-                            handleDocumentForSuggestions(doc);
-                        } else {
-                            setSelectedDocument(doc);
-                            setSelectedOcrId(doc.OcrId);
-                        }
-                    }}
+                    onSelectDocumentII={handleSelectDocumentII}
                     onSelectionChange={handleDocumentsSelection}
+                    processingEnabled={processingEnabled}
                 />
             </div>
 
@@ -218,4 +226,4 @@ function AILab() {
     );
 }
 
-export default AILab;
+export default React.memo(AILab);

@@ -176,15 +176,15 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                     </th>
                     <td className="px-6 py-4">
                         <MatchScoreIndicator 
-                            score={bestMatch.score || 0}
+                            score={bestMatch?.score || 0}
                             matchDetails={{
-                                isRecommended: bestMatch.isRecommended || false,
-                                matchedFields: bestMatch.matches?.matchedFields || [],
-                                confidence: bestMatch.matches?.confidence || {},
-                                claimNumber: bestMatch.claim?.claimNumber || '',
-                                claimantName: bestMatch.claim?.name || '',
-                                dateOfInjury: bestMatch.claim?.dateOfInjury || '',
-                                physicianName: bestMatch.claim?.physicianName || '',
+                                isRecommended: bestMatch?.isRecommended || false,
+                                matchedFields: bestMatch?.matches?.matchedFields || [],
+                                confidence: bestMatch?.matches?.confidence || {},
+                                claimNumber: bestMatch?.claim?.claimNumber || '',
+                                claimantName: bestMatch?.claim?.name || '',
+                                dateOfInjury: bestMatch?.claim?.dateOfInjury || '',
+                                physicianName: bestMatch?.claim?.physicianName || '',
                                 employerName: bestMatch.claim?.employerName || ''
                             }}
                             onProcess={() => handleProcessDocument(doc.OcrId)}
@@ -192,7 +192,7 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                         />
                     </td>
                     <td className="px-6 py-4">
-                        {bestMatch.claim?.claimNumber || 'No match'}
+                        {renderMatchResults(batchResults[doc.OcrId])}
                     </td>
                     <td className="px-6 py-4">
                         {batchProcessing[doc.OcrId] ? (
@@ -403,13 +403,27 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
 
         setBatchProcessing(prev => ({ ...prev, [OcrId]: true }));
         try {
+            // Get document from selectedDocuments
+            const documentData = selectedDocuments.find(doc => doc.OcrId === OcrId);
+            
+            if (!documentData) {
+                throw new Error('Document data not found');
+            }
+
+            // Simplified document metadata
+            const documentMetadata = {
+                OcrId: documentData.OcrId,
+                fileName: documentData.fileName,
+                category: documentData.category
+            };
+
             // First perform NER
             const nerResponse = await fetch('http://localhost:4000/ai/ner', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
-                    text: selectedDocuments.find(doc => doc.OcrId === OcrId)?.textContent,
-                    OcrId 
+                    text: documentData.textContent,
+                    OcrId
                 })
             });
 
@@ -417,13 +431,33 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
             const { entities } = await nerResponse.json();
 
             // Then find matches
-            const matchResponse = await findMatches(entities);
+            const matchResults = await findMatches(entities);
+            
+            // Save match history with minimal metadata
+            const historyResponse = await fetch('http://localhost:4000//match-history', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    OcrId,
+                    matchResults,
+                    documentMetadata // Only sending minimal metadata
+                })
+            });
+
+            if (!historyResponse.ok) {
+                const errorData = await historyResponse.json();
+                throw new Error(errorData.message || 'Failed to save match history');
+            }
+
+            // Fetch latest match history
+            const latestHistoryResponse = await fetch(`http://localhost:4000/match-history/${OcrId}`);
+            const { matchHistory, bestMatch } = await latestHistoryResponse.json();
             
             setBatchResults(prev => ({
                 ...prev,
                 [OcrId]: {
-                    matches: matchResponse.matchResults || [],
-                    topScore: matchResponse.topScore,
+                    matches: matchHistory || [],
+                    topScore: bestMatch?.score || 0,
                     processed: true,
                     timestamp: new Date()
                 }
@@ -443,6 +477,29 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         } finally {
             setBatchProcessing(prev => ({ ...prev, [OcrId]: false }));
         }
+    };
+
+    const renderMatchResults = (docResults) => {
+        if (!docResults?.matches?.length) {
+            return <span className="text-gray-500">No matches found</span>;
+        }
+
+        return (
+            <div className="p-2 border rounded">
+                <div className="flex justify-between items-center">
+                    <span className="font-medium">
+                        {docResults.matches[0]?.claim?.claimNumber || 'No Claim Number'}
+                    </span>
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                        docResults.topScore >= 75 ? 'bg-green-100 text-green-800' :
+                        docResults.topScore >= 46 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                    }`}>
+                        {docResults.topScore?.toFixed(2)}%
+                    </span>
+                </div>
+            </div>
+        );
     };
 
     return (
