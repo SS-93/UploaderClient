@@ -175,33 +175,65 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                         {doc.fileName || 'Unnamed Document'}
                     </th>
                     <td className="px-6 py-4">
-                        <span className={`px-2 py-1 rounded-full text-sm ${
-                            bestMatch.score >= 75 ? 'bg-green-100 text-green-800' :
-                            bestMatch.score >= 50 ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-red-100 text-red-800'
-                        }`}>
-                            Score: {bestMatch.score || 0}%
-                        </span>
+                        <MatchScoreIndicator 
+                            score={bestMatch.score || 0}
+                            matchDetails={{
+                                isRecommended: bestMatch.isRecommended || false,
+                                matchedFields: bestMatch.matches?.matchedFields || [],
+                                confidence: bestMatch.matches?.confidence || {},
+                                claimNumber: bestMatch.claim?.claimNumber || '',
+                                claimantName: bestMatch.claim?.name || '',
+                                dateOfInjury: bestMatch.claim?.dateOfInjury || '',
+                                physicianName: bestMatch.claim?.physicianName || '',
+                                employerName: bestMatch.claim?.employerName || ''
+                            }}
+                            onProcess={() => handleProcessDocument(doc.OcrId)}
+                            isProcessing={batchProcessing[doc.OcrId]}
+                        />
                     </td>
                     <td className="px-6 py-4">
                         {bestMatch.claim?.claimNumber || 'No match'}
                     </td>
                     <td className="px-6 py-4">
                         {batchProcessing[doc.OcrId] ? (
-                            <span className="text-yellow-500">Processing...</span>
+                            <span className="text-yellow-500 flex items-center">
+                                <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                                </svg>
+                                Processing...
+                            </span>
                         ) : docResults.processed ? (
-                            <span className="text-green-500">Complete</span>
+                            <span className="text-green-500 flex items-center">
+                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
+                                </svg>
+                                Complete
+                            </span>
                         ) : (
                             <span className="text-gray-500">Pending</span>
                         )}
                     </td>
-                    <td className="px-6 py-4 text-right">
+                    <td className="px-6 py-4 text-right space-x-2">
                         <button 
                             onClick={() => viewDetails(doc.OcrId)}
                             className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
                         >
                             Details
                         </button>
+                        {!docResults.processed && (
+                            <button
+                                onClick={() => handleProcessDocument(doc.OcrId)}
+                                disabled={batchProcessing[doc.OcrId]}
+                                className={`px-3 py-1 rounded-md text-sm font-medium ${
+                                    batchProcessing[doc.OcrId]
+                                        ? 'bg-gray-300 cursor-not-allowed'
+                                        : 'bg-blue-500 hover:bg-blue-600 text-white'
+                                }`}
+                            >
+                                Process
+                            </button>
+                        )}
                     </td>
                 </tr>
             );
@@ -364,6 +396,53 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
     const handleCancelBatch = async () => {
         // Implement cancel logic if needed
         setBatchProcessing(false);
+    };
+
+    const handleProcessDocument = async (OcrId) => {
+        if (batchProcessing[OcrId]) return;
+
+        setBatchProcessing(prev => ({ ...prev, [OcrId]: true }));
+        try {
+            // First perform NER
+            const nerResponse = await fetch('http://localhost:4000/ai/ner', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ 
+                    text: selectedDocuments.find(doc => doc.OcrId === OcrId)?.textContent,
+                    OcrId 
+                })
+            });
+
+            if (!nerResponse.ok) throw new Error('NER processing failed');
+            const { entities } = await nerResponse.json();
+
+            // Then find matches
+            const matchResponse = await findMatches(entities);
+            
+            setBatchResults(prev => ({
+                ...prev,
+                [OcrId]: {
+                    matches: matchResponse.matchResults || [],
+                    topScore: matchResponse.topScore,
+                    processed: true,
+                    timestamp: new Date()
+                }
+            }));
+
+        } catch (error) {
+            console.error(`Error processing document ${OcrId}:`, error);
+            setBatchResults(prev => ({
+                ...prev,
+                [OcrId]: {
+                    error: true,
+                    errorMessage: error.message,
+                    processed: true,
+                    timestamp: new Date()
+                }
+            }));
+        } finally {
+            setBatchProcessing(prev => ({ ...prev, [OcrId]: false }));
+        }
     };
 
     return (
