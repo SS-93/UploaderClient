@@ -1,66 +1,47 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import MatchScoreIndicator from '../suggestedclaims/MatchScoreIndicator';
 
-const SingleDocumentProcessor = ({ document, onProcessComplete }) => {
-    const [processing, setProcessing] = useState(false);
-    const [matchResults, setMatchResults] = useState(null);
-    const [error, setError] = useState(null);
+const SingleDocumentProcessor = ({ document, matchResults, onProcessComplete }) => {
+    const [isProcessing, setIsProcessing] = useState(false);
 
-    useEffect(() => {
-        if (document) {
-            processDocument(document);
-        }
-    }, [document]);
+    // Early return if no document
+    if (!document) {
+        return null;
+    }
 
-    const processDocument = async (doc) => {
-        setProcessing(true);
-        try {
-            // Perform NER
-            const nerResponse = await fetch('http://localhost:4000/ai/ner', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ text: doc.textContent, OcrId: doc.OcrId })
-            });
-
-            if (!nerResponse.ok) throw new Error('NER processing failed');
-            const { entities } = await nerResponse.json();
-
-            // Find matches
-            const matchResults = await findMatches(entities);
-
-            if (!matchResults || !matchResults.matchResults) {
-                throw new Error('Match results are empty');
-            }
-
-            setMatchResults(matchResults);
-            onProcessComplete(doc.OcrId, matchResults);
-
-        } catch (err) {
-            setError(err.message);
-        } finally {
-            setProcessing(false);
-        }
-    };
+    // Format match details for display
+    const formatMatchDetails = (match) => ({
+        score: match?.score || 0,
+        matchedFields: match?.matches?.matchedFields || [],
+        confidence: match?.matches?.details || {},
+        claimNumber: match?.claim?.claimNumber || 'N/A',
+        claimantName: match?.claim?.name || 'N/A',
+        dateOfInjury: match?.claim?.dateOfInjury || 'N/A',
+        physicianName: match?.claim?.physicianName || 'N/A',
+        isRecommended: match?.isRecommended || false
+    });
 
     return (
-        <div className="p-4 bg-white dark:bg-gray-800 rounded-lg shadow">
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
-                {document.fileName}
+        <div className="bg-white shadow rounded-lg p-4 mb-4">
+            <h3 className="text-lg font-semibold mb-2">
+                {document.fileName || 'Untitled Document'}
             </h3>
-            {processing ? (
-                <p className="text-blue-500">Processing...</p>
-            ) : error ? (
-                <p className="text-red-500">Error: {error}</p>
-            ) : matchResults ? (
-                <div className="mt-4">
-                    <MatchScoreIndicator
-                        score={matchResults.topScore}
-                        matchDetails={matchResults.matchResults[0]}
-                    />
-                </div>
-            ) : (
-                <p className="text-gray-500">No match results available</p>
-            )}
+            
+            <div className="space-y-4">
+                {Array.isArray(matchResults) && matchResults.length > 0 ? (
+                    matchResults.map((match, index) => (
+                        <div key={index} className="border rounded-lg p-4">
+                            <MatchScoreIndicator
+                                score={match?.score || 0}
+                                matchDetails={formatMatchDetails(match)}
+                                isProcessing={isProcessing}
+                            />
+                        </div>
+                    ))
+                ) : (
+                    <p className="text-gray-500">No match results available</p>
+                )}
+            </div>
         </div>
     );
 };

@@ -1,9 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useContext } from 'react'
 import { performNER } from './openaiservices'
-import { findMatchingClaims } from '../../utils/matchingLogic'
+import { findMatchingClaims, saveUpdatedEntities } from '../../utils/matchingLogic'
+import { MatchContext } from '../matchcontext/MatchContext'
 import AllClaims from '../allclaims/AllClaims';
 import SuggestedClaims from '../suggestedclaims/SuggestedClaims';
 import MatchDetails from '../claimquerymatrix/MatchDetails';
+import SingleDocumentProcessor from '../singledocumentprocessor/SingleDocumentProcessor';
 
 function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
   const [entities, setEntities] = useState(null);
@@ -12,6 +14,8 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
   const [isEditing, setIsEditing] = useState(false);
   const [matchResults, setMatchResults] = useState([]);
   const [selectedDocument, setSelectedDocument] = useState(null);
+
+  const { findMatches, getMatchHistory, matchHistory } = useContext(MatchContext);
 
   useEffect(() => {
     if (ocrText && selectedOcrId) {
@@ -53,7 +57,7 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
       setEditableEntities(null);
       setMatchResults([]);
     }
-  }, [ocrText, selectedOcrId, processingEnabled]);
+  }, [ocrText, selectedOcrId, processingEnabled, findMatches]);
 
   useEffect(() => {
     if (entities) {
@@ -116,41 +120,13 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
   const handleSave = async () => {
     try {
       console.log('Sending entities:', editableEntities);
-      const entityResponse = await fetch('http://localhost:4000/ai/save-entities', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          OcrId: selectedOcrId,
-          updatedEntities: editableEntities
-        }),
-      });
-
-      if (!entityResponse.ok) {
-        throw new Error('Failed to save entities');
-      }
-
-      const matches = await findMatchingClaims(editableEntities);
-      setMatchResults(matches);
-
-      const matchHistoryResponse = await fetch('http://localhost:4000/match-history', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          OcrId: selectedOcrId,
-          matchResults: matches
-        }),
-      });
-
-      if (!matchHistoryResponse.ok) {
-        throw new Error('Failed to save match history');
-      }
-
+      const response = await saveUpdatedEntities(selectedOcrId, editableEntities);
+      setEntities(response.entities);
+      setMatchResults(response.matchResults);
       setIsEditing(false);
+      alert('Entities and match history updated successfully.');
     } catch (error) {
-      console.error('Error in handleSave:', error);
-      alert('Failed to save changes');
+      alert(`Failed to save updates: ${error.message}`);
     }
   };
 
@@ -161,12 +137,9 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
 
   const handleEntityChange = (category, index, value) => {
     setEditableEntities(prev => {
-      const newEntities = {
-        ...prev,
-        [category]: prev[category].map((item, i) => i === index ? value : item)
-      };
-      console.log('Updated entities:', newEntities);  // Add this line
-      return newEntities;
+      const updatedCategory = [...prev[category]];
+      updatedCategory[index] = value;
+      return { ...prev, [category]: updatedCategory };
     });
   };
 
@@ -220,6 +193,80 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
     );
   };
 
+  const SaveMatchResultsForm = ({ matchResults, selectedOcrId, onSave }) => {
+    const handleSubmit = async (e) => {
+      e.preventDefault();
+      
+      try {
+        const response = await fetch('http://localhost:4000/ai/match-history', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            OcrId: selectedOcrId,
+            matchResults: {
+              topScore: matchResults.topScore,
+              totalMatches: matchResults.totalMatches,
+              matchResults: matchResults.matchResults?.map(match => ({
+                score: match.score,
+                matchedFields: match.matches?.matchedFields || [],
+                confidence: match.matches?.confidence || {},
+                matchDetails: {
+                  claimNumber: match.claim?.claimNumber,
+                  claimantName: match.claim?.name,
+                  physicianName: match.claim?.physicianName,
+                  dateOfInjury: match.claim?.dateOfInjury,
+                  employerName: match.claim?.employerName
+                },
+                claim: {
+                  claimNumber: match.claim?.claimNumber,
+                  name: match.claim?.name,
+                  physicianName: match.claim?.physicianName,
+                  dateOfInjury: match.claim?.dateOfInjury,
+                  employerName: match.claim?.employerName
+                },
+                isRecommended: match.isRecommended
+              }))
+            }
+          })
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to save match results');
+        }
+
+        const data = await response.json();
+        console.log('Match results saved:', data);
+        onSave && onSave(data);
+      } catch (error) {
+        console.error('Error saving match results:', error);
+      }
+    };
+
+    return (
+      <div className="mt-4 p-4 bg-white rounded-lg shadow">
+        <h3 className="text-lg font-semibold mb-2">Save Match Results</h3>
+        <form onSubmit={handleSubmit}>
+          <div className="mb-4">
+            <p className="text-sm text-gray-600">
+              Top Score: {matchResults.topScore}%
+            </p>
+            <p className="text-sm text-gray-600">
+              Total Matches: {matchResults.totalMatches}
+            </p>
+          </div>
+          <button
+            type="submit"
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Save Match Results
+          </button>
+        </form>
+      </div>
+    );
+  };
+
   return (
     <div>
       <div>AiProcessor</div>
@@ -228,6 +275,10 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
           <div className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16">
             <div className="mb-8">
               <SuggestedClaims 
+                selectedDocument={selectedDocument}
+                matchResults={matchResults}
+              />
+              <SingleDocumentProcessor
                 selectedDocument={selectedDocument}
                 matchResults={matchResults}
               />
@@ -258,6 +309,32 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
                   renderMatchResults()
                 )}
               </div>
+              {matchResults && matchResults.length > 0 && (
+                <SaveMatchResultsForm
+                  matchResults={{
+                    topScore: matchResults[0]?.score || 0,
+                    totalMatches: matchResults.length,
+                    matchResults: matchResults.matchResults?.map(match => ({
+                      score: match.score,
+                      matchedFields: match.matches?.matchedFields || [],
+                      confidence: match.matches?.confidence || {},
+                      matchDetails: { 
+                        claimNumber: match.claim?.claimNumber,
+                        name: match.claim?.name,
+                        physicianName: match.claim?.physicianName,
+                        dateOfInjury: match.claim?.dateOfInjury,
+                        employerName: match.claim?.employerName
+                      },
+                      isRecommended: match.isRecommended
+                    }))
+                  }}
+                  selectedOcrId={selectedOcrId}
+                  onSave={(data) => {
+                    console.log('Match results saved successfully:', data);
+                    // Optionally update UI or show success message
+                  }}
+                />
+              )}
               {/* <AllClaims/>   */}
               <p className="text-lg font-normal text-gray-500 dark:text-gray-400 mb-6">
                 Selected Document OCR ID: {selectedOcrId || 'No document selected'}

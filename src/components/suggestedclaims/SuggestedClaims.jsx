@@ -2,8 +2,11 @@ import React, { useEffect, useContext, useCallback, useState, memo } from 'react
 import MatchScoreIndicator from './MatchScoreIndicator';
 import { MatchContext } from '../matchcontext/MatchContext';
 import BatchProcessingStatus from './BatchProcessingStatus';
+import DocumentSortManager from '../documentsort/DocumentSortManager';
+import MatchHistoryCell from './MatchHistoryCell';
+import SingleDocumentProcessor from '../singledocumentprocessor/SingleDocumentProcessor';
 
-const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingEnabled }) => {
+const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingEnabled, sortResults, aiMatchResults }) => {
     const { 
         detailedMatches, 
         loading, 
@@ -16,8 +19,10 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         processBatch
     } = useContext(MatchContext);
 
-    // Add states for batch processing
-    const [batchProcessing, setBatchProcessing] = useState(false);
+    // Add state for match results with default empty object
+    const [matchResults, setMatchResults] = useState({});
+
+    // Add state for batch processing
     const [batchId, setBatchId] = useState(null);
     const [batchResults, setBatchResults] = useState({
         processed: 0,
@@ -25,20 +30,44 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         success: [],
         failed: []
     });
+    const [batchProcessing, setBatchProcessing] = useState({
+        total: 0,
+        success: [],
+        failed: []
+    });
 
-    // Add new state for details modal
+    // Add state for details modal
     const [selectedDetails, setSelectedDetails] = useState(null);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
 
-    // Add new state for tracking checked documents
+    // Add state for tracking checked documents
     const [checkedDocuments, setCheckedDocuments] = useState([]);
 
-    // Handle single document selection (maintain existing functionality)
+    // Handle single document selection
     useEffect(() => {
         if (selectedDocument?.OcrId) {
             getMatchHistory(selectedDocument.OcrId);
         }
     }, [selectedDocument?.OcrId]);
+
+    // Safely check for selected documents
+    const hasSelectedDocuments = Array.isArray(selectedDocuments) && selectedDocuments.length > 0;
+
+    useEffect(() => {
+        const fetchMatchResults = async () => {
+            if (!selectedDocument?.OcrId) {
+                return; // Exit early if no OcrId
+            }
+            
+            try {
+                await getMatchHistory(selectedDocument.OcrId);
+            } catch (error) {
+                console.error('Error fetching match results:', error);
+            }
+        };
+
+        fetchMatchResults();
+    }, [selectedDocument?.OcrId]); // Only depend on OcrId changes
 
     // Handle batch document processing
     const processBatchDocuments = async (documents) => {
@@ -165,102 +194,74 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
 
     // Add renderCheckedDocuments function
     const renderCheckedDocuments = () => {
-        return selectedDocuments.map((doc) => {
-            const docResults = batchResults[doc.OcrId] || {};
-            const bestMatch = docResults.matches?.[0] || {};
-            
-            return (
-                <tr key={doc.OcrId} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                    <th scope="row" className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                        {doc.fileName || 'Unnamed Document'}
-                    </th>
-                    <td className="px-6 py-4">
-                        <MatchScoreIndicator 
-                            score={bestMatch?.score || 0}
-                            matchDetails={{
-                                isRecommended: bestMatch?.isRecommended || false,
-                                matchedFields: bestMatch?.matches?.matchedFields || [],
-                                confidence: bestMatch?.matches?.confidence || {},
-                                claimNumber: bestMatch?.claim?.claimNumber || '',
-                                claimantName: bestMatch?.claim?.name || '',
-                                dateOfInjury: bestMatch?.claim?.dateOfInjury || '',
-                                physicianName: bestMatch?.claim?.physicianName || '',
-                                employerName: bestMatch.claim?.employerName || ''
-                            }}
-                            onProcess={() => handleProcessDocument(doc.OcrId)}
-                            isProcessing={batchProcessing[doc.OcrId]}
-                        />
-                    </td>
-                    <td className="px-6 py-4">
-                        {renderMatchResults(batchResults[doc.OcrId])}
-                    </td>
-                    <td className="px-6 py-4">
-                        {batchProcessing[doc.OcrId] ? (
-                            <span className="text-yellow-500 flex items-center">
-                                <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                                </svg>
-                                Processing...
-                            </span>
-                        ) : docResults.processed ? (
-                            <span className="text-green-500 flex items-center">
-                                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7" />
-                                </svg>
-                                Complete
-                            </span>
-                        ) : (
-                            <span className="text-gray-500">Pending</span>
-                        )}
-                    </td>
-                    <td className="px-6 py-4 text-right space-x-2">
-                        <button 
-                            onClick={() => viewDetails(doc.OcrId)}
-                            className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                        >
-                            Details
-                        </button>
-                        {!docResults.processed && (
-                            <button
-                                onClick={() => handleProcessDocument(doc.OcrId)}
-                                disabled={batchProcessing[doc.OcrId]}
-                                className={`px-3 py-1 rounded-md text-sm font-medium ${
-                                    batchProcessing[doc.OcrId]
-                                        ? 'bg-gray-300 cursor-not-allowed'
-                                        : 'bg-blue-500 hover:bg-blue-600 text-white'
-                                }`}
-                            >
-                                Process
-                            </button>
-                        )}
-                    </td>
-                </tr>
-            );
-        });
+        // Ensure selectedDocuments is an array before mapping
+        if (!Array.isArray(selectedDocuments)) return null;
+
+        return selectedDocuments.map((doc) => (
+            <tr key={doc.OcrId} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
+                {/* Document Name */}
+                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+                    {doc.fileName}
+                </td>
+
+                {/* Match Score */}
+                <td className="px-6 py-4">
+                    <SingleDocumentProcessor 
+                        document={doc}
+                        matchResults={matchResults[doc.OcrId]}
+                    />
+                    <MatchScoreIndicator 
+                        score={matchResults[doc.OcrId]?.topScore || 0}
+                        matchDetails={matchResults[doc.OcrId]?.matchResults?.[0]}
+                    />
+                </td>
+
+                {/* Match History & Sort Manager */}
+                <td className="px-6 py-4">
+                    <DocumentSortManager 
+                        document={doc}
+                        onSortComplete={(result) => {
+                            setMatchResults(prev => ({
+                                ...prev,
+                                [doc.OcrId]: result
+                            }));
+                        }}
+                    />
+                </td>
+
+                {/* Status */}
+                <td className="px-6 py-4">
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                        loading ? 'bg-yellow-100 text-yellow-800' :
+                        error ? 'bg-red-100 text-red-800' :
+                        'bg-green-100 text-green-800'
+                    }`}>
+                        {loading ? 'Processing' : error ? 'Error' : 'Ready'}
+                    </span>
+                </td>
+
+                {/* Actions */}
+                <td className="px-6 py-4 text-right">
+                    <button 
+                        onClick={() => viewDetails(doc.OcrId)}
+                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
+                    >
+                        Details
+                    </button>
+                </td>
+            </tr>
+        ));
     };
 
     // Update table header to include bulk sort
     const renderTableHeader = () => (
-        <thead className="text-xs text-gray-700 uppercase bg-gray-50 dark:bg-gray-700 dark:text-gray-400">
+        <thead className="text-xs text-gray-700 uppercase bg-gray-50">
             <tr>
                 <th scope="col" className="px-6 py-3">Document</th>
                 <th scope="col" className="px-6 py-3">Match Score</th>
                 <th scope="col" className="px-6 py-3">Best Match</th>
-                <th scope="col" className="px-6 py-3">Status</th>
-                <th scope="col" className="px-6 py-3">
-                    <div className="flex items-center justify-between">
-                        <span>Actions</span>
-                        {selectedDocuments.length > 0 && (
-                            <button
-                                onClick={handleBulkSort}
-                                className="ml-2 bg-blue-500 text-white px-2 py-1 rounded text-xs hover:bg-blue-600"
-                            >
-                                Bulk Sort
-                            </button>
-                        )}
-                    </div>
-                </th>
+                <th scope="col" className="px-6 py-3">Matched Fields</th>
+                <th scope="col" className="px-6 py-3">Actions</th>
             </tr>
         </thead>
     );
@@ -323,13 +324,13 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                     {bestMatch?.claim?.claimNumber || 'No match'}
                 </td>
                 <td className="px-6 py-4">
-                    {loading ? (
-                        <span className="text-yellow-500">Processing...</span>
-                    ) : error ? (
-                        <span className="text-red-500">Error</span>
-                    ) : (
-                        <span className="text-green-500">Ready</span>
-                    )}
+                    <span className={`px-2 py-1 rounded-full text-xs ${
+                        loading ? 'bg-yellow-100 text-yellow-800' :
+                        error ? 'bg-red-100 text-red-800' :
+                        'bg-green-100 text-green-800'
+                    }`}>
+                        {loading ? 'Processing' : error ? 'Error' : 'Ready'}
+                    </span>
                 </td>
                 <td className="px-6 py-4 text-right">
                     <button 
@@ -398,6 +399,13 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         setBatchProcessing(false);
     };
 
+    const handleSortComplete = (OcrId, result) => {
+        setMatchResults(prev => ({
+            ...prev,
+            [OcrId]: result
+        }));
+    };
+
     const handleProcessDocument = async (OcrId) => {
         if (batchProcessing[OcrId]) return;
 
@@ -434,7 +442,7 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
             const matchResults = await findMatches(entities);
             
             // Save match history with minimal metadata
-            const historyResponse = await fetch('http://localhost:4000//match-history', {
+            const historyResponse = await fetch('http://localhost:4000/ai/match-history', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ 
@@ -450,7 +458,7 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
             }
 
             // Fetch latest match history
-            const latestHistoryResponse = await fetch(`http://localhost:4000/match-history/${OcrId}`);
+            const latestHistoryResponse = await fetch(`http://localhost:4000/ai/match-history/${OcrId}`);
             const { matchHistory, bestMatch } = await latestHistoryResponse.json();
             
             setBatchResults(prev => ({
@@ -481,7 +489,18 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
 
     const renderMatchResults = (docResults) => {
         if (!docResults?.matches?.length) {
-            return <span className="text-gray-500">No matches found</span>;
+            return (
+                <div className="p-2 border rounded">
+                    <div className="flex items-center justify-between">
+                        <span className="text-gray-500">No matches found</span>
+                        <div className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-600">Match Score:</span>
+                            <MatchScoreIndicator score={0} />
+                            <span className="text-sm font-medium">0.0%</span>
+                        </div>
+                    </div>
+                </div>
+            );
         }
 
         return (
@@ -490,15 +509,42 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                     <span className="font-medium">
                         {docResults.matches[0]?.claim?.claimNumber || 'No Claim Number'}
                     </span>
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                        docResults.topScore >= 75 ? 'bg-green-100 text-green-800' :
-                        docResults.topScore >= 46 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
-                    }`}>
-                        {docResults.topScore?.toFixed(2)}%
-                    </span>
+                    <div className="flex items-center space-x-2">
+                        <span className="text-sm text-gray-600">Match Score:</span>
+                        <MatchScoreIndicator score={docResults.topScore || 0} />
+                        <span className="text-sm font-medium">
+                            {(docResults.topScore || 0).toFixed(1)}%
+                        </span>
+                    </div>
                 </div>
             </div>
+        );
+    };
+
+    const renderDocumentRow = (doc) => {
+        const aiResults = aiMatchResults[doc.OcrId] || [];
+        
+        return (
+            <tr key={doc.OcrId}>
+                {/* ... other cells ... */}
+                <td className="px-6 py-4">
+                    <div className="space-y-2">
+                        {aiResults.map((match, index) => (
+                            <div key={index} className="border rounded-lg p-2">
+                                <div className="flex justify-between items-center">
+                                    <span className="font-medium">
+                                        {match.claim.claimNumber}
+                                    </span>
+                                    <MatchScoreIndicator score={match.score} />
+                                </div>
+                                <div className="text-sm text-gray-600 mt-1">
+                                    {match.matchDetails.matchedFields?.join(', ')}
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </td>
+            </tr>
         );
     };
 
@@ -518,6 +564,7 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                     </p>
                 </div>
             </div>
+            
 
             {/* Results Table */}
             <div className="relative overflow-x-auto">
@@ -559,6 +606,21 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                     isProcessing={batchProcessing}
                     onCancel={handleCancelBatch}
                 />
+            )}
+
+            {/* Sort Results Display */}
+            {sortResults && (
+                <div className="mb-4 p-3 bg-gray-50 rounded">
+                    <h3 className="font-medium text-sm">Sort Results</h3>
+                    <div className="text-sm text-gray-600">
+                        Status: {sortResults.status}
+                        {sortResults.targetClaim && (
+                            <span className="ml-2">
+                                → Claim: {sortResults.targetClaim.claimNumber}
+                            </span>
+                        )}
+                    </div>
+                </div>
             )}
         </div>
     );

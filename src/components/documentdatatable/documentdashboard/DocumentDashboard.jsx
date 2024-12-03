@@ -6,8 +6,9 @@ import './DashboardII.css'
 import PropTypes from 'prop-types';
 import SuggestedClaims from '../../suggestedclaims/SuggestedClaims';
 import { findMatchingClaims } from '../../../utils/matchingLogic';
+import SingleDocumentProcessor from '../../singledocumentprocessor/SingleDocumentProcessor';
 
-function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange, processingEnabled, selectedDocument, setSelectedDocument }) {
+function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange, processingEnabled, selectedDocuments = [], setSelectedDocuments }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
   const [parkedDocuments, setParkedDocuments] = useState([]);
@@ -25,7 +26,6 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   const [selectedDocumentId, setSelectedDocumentId] = useState(null);
   const [showMatchHistory, setShowMatchHistory] = useState(false);
   const [selectedDocMatchHistory, setSelectedDocMatchHistory] = useState(null);
-  const [selectedDocuments, setSelectedDocuments] = useState([]);
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [matchResults, setMatchResults] = useState({});
@@ -390,22 +390,18 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     onSelectionChange(selectedDocs);
   };
 
-  const handleSelectDocument = (ocrId) => {
-    setSelectedDocuments(prev => {
-        const newSelection = prev.includes(ocrId)
-            ? prev.filter(id => id !== ocrId)
-            : [...prev, ocrId];
-        
-        // Find full document objects for selected IDs
-        const selectedDocs = documents.filter(doc => 
-            newSelection.includes(doc.OcrId)
-        );
-        
-        // Notify parent component of selection change
-        onSelectionChange(selectedDocs);
-        
-        return newSelection;
-    });
+  const handleSelectDocument = (document) => {
+    if (setSelectedDocuments) {
+        const isSelected = selectedDocuments.some(doc => doc.OcrId === document.OcrId);
+        if (isSelected) {
+            setSelectedDocuments(selectedDocuments.filter(doc => doc.OcrId !== document.OcrId));
+        } else {
+            setSelectedDocuments([...selectedDocuments, document]);
+        }
+    }
+    if (onSelectDocument) {
+        onSelectDocument(document);
+    }
   };
 
   const handleBulkSort = async (selectedIds) => {
@@ -463,27 +459,28 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
     }
   };
 
-  const handleDocumentSelection = (document, isSelected) => {
-    // Validate document before processing
-    if (!document.OcrId) {
-        console.error('Invalid document data:', document);
-        return;
-    }
+  const handleDocumentSelection = async (doc) => {
+    const updatedDocs = selectedDocuments.includes(doc) 
+        ? selectedDocuments.filter(d => d.OcrId !== doc.OcrId)
+        : [...selectedDocuments, doc];
+    
+    setSelectedDocuments(updatedDocs);
 
-    setSelectedDocuments(prev => {
-        if (isSelected) {
-            // Add to selection if not already present
-            return prev.some(doc => doc.OcrId === document.OcrId) 
-                ? prev 
-                : [...prev, document];
-        } else {
-            // Remove from selection
-            return prev.filter(doc => doc.OcrId !== document.OcrId);
+    // Fetch match results for newly selected document
+    if (!selectedDocuments.includes(doc)) {
+        try {
+            const response = await fetch(`http://localhost:4000/ai/match-history/${doc.OcrId}`);
+            if (response.ok) {
+                const results = await response.json();
+                setMatchResults(prev => ({
+                    ...prev,
+                    [doc.OcrId]: results.matchResults
+                }));
+            }
+        } catch (error) {
+            console.error('Error fetching match results:', error);
         }
-    });
-
-    // Notify parent component with valid document data only
-    onSelectionChange(document);
+    }
   };
 
   const handleCheckboxChange = (e, document) => {
@@ -528,17 +525,17 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
         console.error('Document OcrId is undefined');
         return;
     }
-    setSelectedDocument(document);
+    setSelectedDocuments(document);
   };
 
   useEffect(() => {
-    if (selectedDocument && selectedDocument.OcrId) {
-        console.log('AILab received document:', selectedDocument);
+    if (selectedDocuments && selectedDocuments.OcrId) {
+        console.log('AILab received document:', selectedDocuments);
         // Proceed with processing
     } else {
-        console.error('Invalid document data:', selectedDocument);
+        console.error('Invalid document data:', selectedDocuments);
     }
-  }, [selectedDocument]);
+  }, [selectedDocuments]);
 
   const handleDocumentSelect = async (document) => {
     // If document is already processed, use cached results
@@ -705,7 +702,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                             <input 
                                 type="checkbox"
                                 checked={selectedDocuments.includes(doc.OcrId)}
-                                onChange={() => handleSelectDocument(doc.OcrId)}
+                                onChange={() => handleSelectDocument(doc)}
                                 className="rounded border-gray-300"
                             />
                         </td>
@@ -870,6 +867,20 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
         selectedDocuments={selectedDocuments}
         matchResults={Object.values(matchResults)}
       />
+
+      {selectedDocuments.map(doc => doc && (
+        <SingleDocumentProcessor
+            key={doc.OcrId}
+            document={doc}
+            matchResults={matchResults[doc.OcrId] || []}
+            onProcessComplete={(ocrId, results) => {
+                setMatchResults(prev => ({
+                    ...prev,
+                    [ocrId]: results
+                }));
+            }}
+        />
+      ))}
     </div>
   );
 }
@@ -878,7 +889,9 @@ DocumentDashboard.propTypes = {
     onSelectDocument: PropTypes.func,
     onSelectDocumentII: PropTypes.func,
     onSelectionChange: PropTypes.func,
-    processingEnabled: PropTypes.bool
+    processingEnabled: PropTypes.bool,
+    selectedDocuments: PropTypes.array,
+    setSelectedDocuments: PropTypes.func
 };
 
 DocumentDashboard.defaultProps = {

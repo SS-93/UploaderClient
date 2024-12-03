@@ -24,9 +24,12 @@ import SuggestedClaims from './components/suggestedclaims/SuggestedClaims';
 import ClaimQueryMatrix from './components/claimquerymatrix/ClaimQueryMatrix';
 import ClaimDock from './components/claimprofile/ClaimDock';
 import MatchDetails from './components/claimquerymatrix/MatchDetails';
+import { MatchProvider } from './components/matchcontext/MatchContext';
+
 
 function App() {
   return (
+    <MatchProvider>
     <BrowserRouter>
    
     <Routes>
@@ -45,7 +48,7 @@ function App() {
       </Routes>
       
     </BrowserRouter>
- 
+    </MatchProvider>
 
   );
 }

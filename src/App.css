@@ -46,3 +46,30 @@
   background-color: rgba(249, 115, 22, 0.7) !important; /* Orange with opacity */
   color: white !important;
 }
+
+.suggested-claims {
+    /* Example styles */
+    margin-top: 20px;
+}
+
+.suggested-claims table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.suggested-claims th, .suggested-claims td {
+    padding: 12px;
+    border: 1px solid #e5e7eb; /* Tailwind's gray-200 */
+}
+
+.suggested-claims th {
+    background-color: #f9fafb; /* Tailwind's gray-50 */
+    text-align: left;
+}
+
+.suggested-claims .top-match {
+    background-color: #dcfce7; /* Tailwind's green-100 */
+    color: #047857; /* Tailwind's green-800 */
+    padding: 16px;
+    border-radius: 8px;
+}

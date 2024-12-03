@@ -4,6 +4,7 @@ import AiProcessor from '../aiprocessor/AiProcessor';
 import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDashboard';
 import SuggestedClaims from '../suggestedclaims/SuggestedClaims';
 import MatchScoreIndicator from '../suggestedclaims/MatchScoreIndicator';
+import DocumentSortManager from '../documentsort/DocumentSortManager';
 
 function AILab() {
     const [selectedOcrId, setSelectedOcrId] = useState(null);
@@ -12,6 +13,8 @@ function AILab() {
     const [matchResults, setMatchResults] = useState([]);
     const [processingEnabled, setProcessingEnabled] = useState(true);
     const [selectedDocuments, setSelectedDocuments] = useState([]);
+    const [sortResults, setSortResults] = useState({});
+    const [documentMatchResults, setDocumentMatchResults] = useState({});
 
     const { 
         findMatches,
@@ -124,35 +127,60 @@ function AILab() {
         }
     };
 
+    const handleDocumentSelect = (document) => {
+        if (!document?.OcrId) {
+            console.warn('Document missing OcrId:', document);
+            return;
+        }
+        setSelectedDocument(document);
+    };
+
+
     const handleDocumentForSuggestions = async (document) => {
         try {
-            const normalizedDocument = {
-                OcrId: document.OcrId,
-                fileName: document.fileName || 'Untitled Document',
-                category: document.category || 'Uncategorized',
-                uploadDate: document.uploadDate || new Date().toISOString(),
-                textContent: document.textContent || ''
-            };
-
-            setSelectedDocument(normalizedDocument);
-            
-            // Fetch match history and suggested claims for the normalized document
-            if (normalizedDocument.OcrId) {
-                await getMatchHistory(normalizedDocument.OcrId);
-                await fetchSuggestedClaims(normalizedDocument.OcrId);
+            // Fetch OCR text if not available
+            let textContent = document.textContent;
+            if (!textContent) {
+                const ocrResponse = await fetch(`http://localhost:4000/dms/ocr-text/${document.OcrId}`);
+                if (ocrResponse.ok) {
+                    const ocrData = await ocrResponse.json();
+                    textContent = ocrData.textContent;
+                }
             }
 
+            // Get match history
+            const historyResponse = await fetch(`http://localhost:4000/ai/match-history/${document.OcrId}`);
+            if (historyResponse.ok) {
+                const { matchHistory, bestMatch } = await historyResponse.json();
+                
+                // Update document match results
+                setDocumentMatchResults(prev => ({
+                    ...prev,
+                    [document.OcrId]: {
+                        matchHistory,
+                        bestMatch: {
+                            score: bestMatch?.score || 0,
+                            claimId: bestMatch?.claimId,
+                            matchDetails: bestMatch?.matchDetails || {},
+                            matchedFields: bestMatch?.matchedFields || [],
+                            confidence: bestMatch?.confidence || 0
+                        }
+                    }
+                }));
+            }
         } catch (error) {
             console.error('Error processing document for suggestions:', error);
         }
     };
 
-    const handleDocumentsSelection = (documents) => {
+    const handleDocumentsSelection = async (documents) => {
         setSelectedDocuments(documents);
-        if (processingEnabled) {
-            documents.forEach(doc => {
-                handleDocumentForSuggestions(doc);
-            });
+        
+        // Process each document for match results
+        for (const doc of documents) {
+            if (doc.OcrId) {
+                await handleDocumentForSuggestions(doc);
+            }
         }
     };
 
@@ -162,6 +190,13 @@ function AILab() {
             return;
         }
         setSelectedDocument(document);
+    };
+
+    const handleSortComplete = (documentId, result) => {
+        setSortResults(prev => ({
+            ...prev,
+            [documentId]: result
+        }));
     };
 
     useEffect(() => {
@@ -195,11 +230,21 @@ function AILab() {
                     processingEnabled={processingEnabled}
                 />
                 
+                {selectedDocument && (
+                    <div className="bg-white p-4 rounded-lg shadow">
+                        <DocumentSortManager
+                            document={selectedDocument}
+                            onSortComplete={(result) => handleSortComplete(selectedDocument.OcrId, result)}
+                        />
+                    </div>
+                )}
+                
                 <SuggestedClaims 
                     selectedDocument={selectedDocument}
                     selectedDocuments={selectedDocuments}
                     matchResults={matchResults}
                     fileName={selectedDocument?.fileName}
+                    documentMatchResults={documentMatchResults}
                     processingEnabled={processingEnabled}
                 />
                 
@@ -208,6 +253,9 @@ function AILab() {
                     onSelectDocumentII={handleSelectDocumentII}
                     onSelectionChange={handleDocumentsSelection}
                     processingEnabled={processingEnabled}
+                    sortResults={sortResults[selectedDocument?.OcrId]}
+                    selectedDocuments={selectedDocuments}
+                    setSelectedDocuments={setSelectedDocuments}
                 />
             </div>
 
