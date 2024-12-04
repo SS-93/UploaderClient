@@ -29,6 +29,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   const [isBulkProcessing, setIsBulkProcessing] = useState(false);
   const [selectionMode, setSelectionMode] = useState(false);
   const [matchResults, setMatchResults] = useState({});
+  const [documentMatchResults, setDocumentMatchResults] = useState({});
 
   
   const categories = ["Correspondence General", "First Notice of Loss", "Invoice", "Legal", "Medicals", "Wages", "Media"];
@@ -872,7 +873,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
         <SingleDocumentProcessor
             key={doc.OcrId}
             document={doc}
-            matchResults={matchResults[doc.OcrId] || []}
+            matchResults={documentMatchResults[doc.OcrId] || {}}
             onProcessComplete={(ocrId, results) => {
                 setMatchResults(prev => ({
                     ...prev,

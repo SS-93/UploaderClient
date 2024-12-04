@@ -209,6 +209,7 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                     <SingleDocumentProcessor 
                         document={doc}
                         matchResults={matchResults[doc.OcrId]}
+                        
                     />
                     <MatchScoreIndicator 
                         score={matchResults[doc.OcrId]?.topScore || 0}

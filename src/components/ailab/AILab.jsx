@@ -174,12 +174,33 @@ function AILab() {
     };
 
     const handleDocumentsSelection = async (documents) => {
+        console.log('Processing selected documents:', documents);
         setSelectedDocuments(documents);
+        
+        // Clear previous match results
+        setDocumentMatchResults({});
         
         // Process each document for match results
         for (const doc of documents) {
             if (doc.OcrId) {
-                await handleDocumentForSuggestions(doc);
+                try {
+                    // Fetch match history for each document
+                    const response = await fetch(`http://localhost:4000/ai/document-match-details/${doc.OcrId}`);
+                    if (!response.ok) {
+                        throw new Error(`Failed to fetch match details for OcrId: ${doc.OcrId}`);
+                    }
+                    
+                    const matchData = await response.json();
+                    console.log(`Match details for OcrId ${doc.OcrId}:`, matchData);
+                    
+                    // Update document match results
+                    setDocumentMatchResults(prev => ({
+                        ...prev,
+                        [doc.OcrId]: matchData
+                    }));
+                } catch (error) {
+                    console.error(`Error processing document ${doc.OcrId}:`, error);
+                }
             }
         }
     };
