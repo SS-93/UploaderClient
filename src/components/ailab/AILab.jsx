@@ -5,6 +5,7 @@ import DocumentDashboard from '../documentdatatable/documentdashboard/DocumentDa
 import SuggestedClaims from '../suggestedclaims/SuggestedClaims';
 import MatchScoreIndicator from '../suggestedclaims/MatchScoreIndicator';
 import DocumentSortManager from '../documentsort/DocumentSortManager';
+import ModelMetrics from '../modelmetrics/ModelMetrics';
 
 function AILab() {
     const [selectedOcrId, setSelectedOcrId] = useState(null);
@@ -245,12 +246,13 @@ function AILab() {
             </div>
 
             <div className="grid grid-cols-1 gap-6">
+                
                 <AiProcessor 
                     selectedOcrId={selectedOcrId}
                     ocrText={ocrText}
                     processingEnabled={processingEnabled}
                 />
-                
+{/*                 
                 {selectedDocument && (
                     <div className="bg-white p-4 rounded-lg shadow">
                         <DocumentSortManager
@@ -258,7 +260,7 @@ function AILab() {
                             onSortComplete={(result) => handleSortComplete(selectedDocument.OcrId, result)}
                         />
                     </div>
-                )}
+                )} */}
                 
                 <SuggestedClaims 
                     selectedDocument={selectedDocument}
@@ -268,7 +270,6 @@ function AILab() {
                     documentMatchResults={documentMatchResults}
                     processingEnabled={processingEnabled}
                 />
-                
                 <DocumentDashboard
                     onSelectDocument={handleSelectDocument}
                     onSelectDocumentII={handleSelectDocumentII}
@@ -278,6 +279,7 @@ function AILab() {
                     selectedDocuments={selectedDocuments}
                     setSelectedDocuments={setSelectedDocuments}
                 />
+                <ModelMetrics />
             </div>
 
             {loading && (

@@ -318,25 +318,35 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
 
   const handleSortDocuments = async (OcrId) => {
     try {
-      const res = await fetch(`http://localhost:4000/dms/move-document/${claimId}/${OcrId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+        setLoading(true);
+        const res = await fetch(`http://localhost:4000/dms/sort-document/${OcrId}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
 
-      if (res.ok) {
-        fetchNewlyUploadedDocuments();
-        if (parkId) fetchParkedDocuments();
-        if (parkSessionId) fetchParkingSessionDocuments();
-        alert('Document sorted successfully');
-      } else {
-        const errorData = await res.json();
-        throw new Error(`Failed to sort document: ${errorData.message}`);
-      }
+        if (!res.ok) {
+            const errorData = await res.json();
+            throw new Error(errorData.message || 'Failed to sort document');
+        }
+
+        const result = await res.json();
+        console.log('Document sorted successfully:', result);
+        
+        // Refresh document lists
+        await fetchNewlyUploadedDocuments();
+        if (parkId) await fetchParkedDocuments();
+        if (parkSessionId) await fetchParkingSessionDocuments();
+
+        // Show success message
+        alert(`Document sorted successfully to claim ${result.claimNumber}`);
+
     } catch (err) {
-      console.error('Error sorting document:', err);
-      alert(`Failed to sort document: ${err.message}`);
+        console.error('Error sorting document:', err);
+        alert(err.message);
+    } finally {
+        setLoading(false);
     }
   };
 

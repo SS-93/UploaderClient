@@ -3,12 +3,11 @@ import { MatchContext } from '../matchcontext/MatchContext';
 
 const DocumentSortManager = ({ document, onSortComplete }) => {
     const { getMatchHistory } = useContext(MatchContext);
-    const [sortStatus, setSortStatus] = useState('pending'); // pending, sorting, sorted, error
+    const [sortStatus, setSortStatus] = useState('pending');
     const [matchHistory, setMatchHistory] = useState(null);
     const [sortResults, setSortResults] = useState(null);
 
     useEffect(() => {
-        // Fetch match history when component mounts
         if (document?.OcrId) {
             loadMatchHistory();
         }
@@ -16,8 +15,12 @@ const DocumentSortManager = ({ document, onSortComplete }) => {
 
     const loadMatchHistory = async () => {
         try {
-            const history = await getMatchHistory(document.OcrId);
-            setMatchHistory(history);
+            const response = await fetch(`http://localhost:4000/ai/document-match-details/${document.OcrId}`);
+            if (!response.ok) throw new Error('Failed to fetch match details');
+            const data = await response.json();
+            
+            console.log('Loaded match history:', data);
+            setMatchHistory(data);
         } catch (error) {
             console.error('Error loading match history:', error);
         }
@@ -25,57 +28,97 @@ const DocumentSortManager = ({ document, onSortComplete }) => {
 
     const handleSort = async () => {
         setSortStatus('sorting');
+        console.log('\n=== Starting Sort Process ===');
+        console.log('Document:', document);
+        console.log('Match History:', matchHistory);
+
         try {
-            // Call your sorting endpoint
-            const response = await fetch(`http://localhost:4000/dms/sort/${document.OcrId}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    matchHistory: matchHistory,
-                    documentId: document.OcrId
-                })
+            // Get the latest match from history
+            const latestMatch = matchHistory?.matchHistory?.[0];
+            const targetClaimNumber = latestMatch?.matchDetails?.claimNumber;
+
+            if (!targetClaimNumber) {
+                throw new Error('No target claim number found in match history');
+            }
+
+            // First, fetch the claim ID using claim number
+            const claimResponse = await fetch(`http://localhost:4000/new/find-by-number/${targetClaimNumber}`);
+            if (!claimResponse.ok) {
+                throw new Error('Failed to find claim by number');
+            }
+            
+            const claimData = await claimResponse.json();
+            const claimId = claimData.found._id;
+
+            console.log('Sort Details:', {
+                OcrId: document.OcrId,
+                targetClaimNumber,
+                claimId,
+                confidence: latestMatch.score
             });
 
+            // Use the correct endpoint
+            const response = await fetch(
+                `http://localhost:4000/dms/sort-document/${claimId}/${document.OcrId}`, 
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        claimNumber: targetClaimNumber,
+                        matchScore: latestMatch.score
+                    })
+                }
+            );
+
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.message || 'Sort operation failed');
+            }
+
             const result = await response.json();
+            console.log('Sort Result:', result);
+            
             setSortResults(result);
             setSortStatus('sorted');
             onSortComplete?.(result);
         } catch (error) {
-            console.error('Error sorting document:', error);
+            console.error('Sort Error:', error);
             setSortStatus('error');
         }
     };
 
+    const getConfidenceClass = (score) => {
+        if (score >= 75) return 'bg-green-100 text-green-800';
+        if (score >= 46) return 'bg-yellow-100 text-yellow-800';
+        return 'bg-red-100 text-red-800';
+    };
+
     return (
         <div className="flex items-center space-x-4">
-            {/* Match History Display */}
             <div className="flex-1">
-                {matchHistory && (
+                {matchHistory && matchHistory.matchHistory?.[0] && (
                     <div className="text-sm">
                         <div className="flex items-center space-x-2">
                             <span className="font-medium">
-                                Best Match: {matchHistory.matchResults?.[0]?.claim?.claimNumber || 'No match'}
+                                Best Match: {matchHistory.matchHistory[0].matchDetails?.claimNumber || 'No match'}
                             </span>
                             <span className={`px-2 py-1 rounded-full text-xs ${
-                                matchHistory.topScore >= 75 ? 'bg-green-100 text-green-800' :
-                                matchHistory.topScore >= 46 ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-red-100 text-red-800'
+                                getConfidenceClass(matchHistory.matchHistory[0].score)
                             }`}>
-                                {matchHistory.topScore?.toFixed(1)}%
+                                {matchHistory.matchHistory[0].score?.toFixed(1)}%
                             </span>
                         </div>
-                        {matchHistory.matchResults?.[0]?.matchedFields && (
+                        {matchHistory.matchHistory[0].matchedFields && (
                             <div className="text-xs text-gray-500 mt-1">
-                                Matched: {matchHistory.matchResults[0].matchedFields.join(', ')}
+                                Matched: {matchHistory.matchHistory[0].matchedFields.join(', ')}
                             </div>
                         )}
                     </div>
                 )}
             </div>
 
-            {/* Sort Status & Controls */}
             <div className="flex items-center space-x-2">
                 {sortStatus === 'sorted' && (
                     <span className="text-green-600 text-sm">✓ Sorted</span>
