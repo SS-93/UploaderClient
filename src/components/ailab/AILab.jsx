@@ -16,6 +16,11 @@ function AILab() {
     const [selectedDocuments, setSelectedDocuments] = useState([]);
     const [sortResults, setSortResults] = useState({});
     const [documentMatchResults, setDocumentMatchResults] = useState({});
+    const [bulkSortStatus, setBulkSortStatus] = useState({
+        processing: false,
+        status: 'pending',
+        results: null
+    });
 
     const { 
         findMatches,
@@ -221,6 +226,23 @@ function AILab() {
         }));
     };
 
+    const handleBulkSortComplete = (results) => {
+        setBulkSortStatus(prev => ({
+            ...prev,
+            processing: false,
+            status: 'completed',
+            results
+        }));
+        
+        // Refresh document list or update UI as needed
+        // You might want to remove sorted documents from the list
+        if (results?.successful?.length > 0) {
+            setSelectedDocuments(prev => 
+                prev.filter(doc => !results.successful.find(r => r.OcrId === doc.OcrId))
+            );
+        }
+    };
+
     useEffect(() => {
         if (selectedDocument) {
             console.log('AILab received document:', selectedDocument);
@@ -269,6 +291,10 @@ function AILab() {
                     fileName={selectedDocument?.fileName}
                     documentMatchResults={documentMatchResults}
                     processingEnabled={processingEnabled}
+                    bulkSortStatus={bulkSortStatus}
+                    onBulkSortComplete={handleBulkSortComplete}
+                    sortResults={sortResults}
+                    ai
                 />
                 <DocumentDashboard
                     onSelectDocument={handleSelectDocument}

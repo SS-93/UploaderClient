@@ -1,11 +1,18 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { MatchContext } from '../matchcontext/MatchContext';
 
-const DocumentSortManager = ({ document, onSortComplete }) => {
+const DocumentSortManager = ({ 
+    document, 
+    documents = [], 
+    documentMatchResults,
+    onSortComplete,
+    onBulkSortComplete 
+}) => {
     const { getMatchHistory } = useContext(MatchContext);
     const [sortStatus, setSortStatus] = useState('pending');
     const [matchHistory, setMatchHistory] = useState(null);
     const [sortResults, setSortResults] = useState(null);
+    const [processing, setProcessing] = useState(false);
 
     useEffect(() => {
         if (document?.OcrId) {
@@ -89,6 +96,38 @@ const DocumentSortManager = ({ document, onSortComplete }) => {
         }
     };
 
+    const handleBulkSort = async () => {
+        try {
+            const documentsToSort = documents.map(doc => {
+                const matchHistory = documentMatchResults[doc.OcrId]?.matchHistory || [];
+                const bestMatch = matchHistory[0];
+                
+                return {
+                    OcrId: doc.OcrId,
+                    claimId: bestMatch?.matchDetails?.claimId,
+                    matchScore: bestMatch?.score,
+                    claimNumber: bestMatch?.matchDetails?.claimNumber
+                };
+            }).filter(doc => doc.claimId); // Only include docs with valid matches
+
+            const response = await fetch(
+                'http://localhost:4000/dms/sort-documents',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ documents: documentsToSort })
+                }
+            );
+
+            if (!response.ok) throw new Error('Bulk sort failed');
+            
+            const results = await response.json();
+            onBulkSortComplete?.(results);
+        } catch (error) {
+            console.error('Bulk Sort Error:', error);
+        }
+    };
+
     const getConfidenceClass = (score) => {
         if (score >= 75) return 'bg-green-100 text-green-800';
         if (score >= 46) return 'bg-yellow-100 text-yellow-800';
@@ -119,13 +158,14 @@ const DocumentSortManager = ({ document, onSortComplete }) => {
                 )}
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-3">
                 {sortStatus === 'sorted' && (
                     <span className="text-green-600 text-sm">✓ Sorted</span>
                 )}
                 {sortStatus === 'error' && (
                     <span className="text-red-600 text-sm">⚠ Error</span>
                 )}
+                {/* Regular Sort Button */}
                 <button
                     onClick={handleSort}
                     disabled={sortStatus === 'sorting'}
@@ -137,6 +177,22 @@ const DocumentSortManager = ({ document, onSortComplete }) => {
                 >
                     {sortStatus === 'sorting' ? 'Sorting...' : 'Sort'}
                 </button>
+                {/* Bulk Sort Button */}
+                {/* <button
+                    onClick={handleBulkSort}
+                    disabled={processing || sortStatus === 'sorting'}
+                    className={`px-3 py-1 rounded-md text-sm ${
+                        processing || sortStatus === 'sorting'
+                            ? 'bg-gray-300 cursor-not-allowed'
+                            : 'bg-coral-500 hover:bg-coral-600 text-white'
+                    }`}
+                    style={{ 
+                        backgroundColor: processing || sortStatus === 'sorting' ? '#d1d5db' : '#FF7F50',
+                        borderColor: '#FF6347'
+                    }}
+                >
+                    {processing ? 'Processing...' : 'Bulk Sort'}
+                </button> */}
             </div>
         </div>
     );

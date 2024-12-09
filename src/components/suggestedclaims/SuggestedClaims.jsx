@@ -1,12 +1,21 @@
-import React, { useEffect, useContext, useCallback, useState, memo } from 'react';
+import React, { useEffect, useContext, useCallback, useState, memo, useMemo } from 'react';
 import MatchScoreIndicator from './MatchScoreIndicator';
 import { MatchContext } from '../matchcontext/MatchContext';
 import BatchProcessingStatus from './BatchProcessingStatus';
 import DocumentSortManager from '../documentsort/DocumentSortManager';
 import MatchHistoryCell from './MatchHistoryCell';
 import SingleDocumentProcessor from '../singledocumentprocessor/SingleDocumentProcessor';
-
-const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingEnabled, sortResults, aiMatchResults }) => {
+import BulkSortManager from '../bulksort/BulkSortManager';
+const SuggestedClaims = ({ 
+    selectedDocument, 
+    selectedDocuments = [], 
+    processingEnabled, 
+    documentMatchResults,
+    bulkSortStatus,
+    onBulkSortComplete, 
+    aiMatchResults,
+    sortResults,
+}) => {
     const { 
         detailedMatches, 
         loading, 
@@ -42,6 +51,9 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
 
     // Add state for tracking checked documents
     const [checkedDocuments, setCheckedDocuments] = useState([]);
+    const [processing, setProcessing] = useState(false);
+    const [sortStatus, setSortStatus] = useState('pending');
+    const [bulkSortDocuments, setBulkSortDocuments] = useState([]);
 
     // Handle single document selection
     useEffect(() => {
@@ -221,11 +233,21 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
                 <td className="px-6 py-4">
                     <DocumentSortManager 
                         document={doc}
+                        documents={selectedDocuments}
+                        documentMatchResults={documentMatchResults}
                         onSortComplete={(result) => {
                             setMatchResults(prev => ({
                                 ...prev,
                                 [doc.OcrId]: result
                             }));
+                        }}
+                        onBulkSortComplete={(results) => {
+                            results.successful.forEach(result => {
+                                setMatchResults(prev => ({
+                                    ...prev,
+                                    [result.OcrId]: result
+                                }));
+                            });
                         }}
                     />
                 </td>
@@ -270,29 +292,46 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
     // Add bulk sort handler
     const handleBulkSort = async () => {
         if (!selectedDocuments.length) return;
-        
-        try {
-            const response = await fetch('http://localhost:4000/dms/bulk-sort', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    documentIds: selectedDocuments.map(doc => doc.OcrId),
-                    autoSort: true,
-                    minScore: 75
-                }),
-            });
 
-            if (response.ok) {
-                const result = await response.json();
-                alert(`Successfully sorted ${result.success.length} documents`);
-            } else {
-                throw new Error('Failed to sort documents');
+        try {
+            const documentsToSort = selectedDocuments
+                .filter(doc => documentMatchResults[doc.OcrId]?.matchHistory?.[0])
+                .map(doc => {
+                    const matchHistory = documentMatchResults[doc.OcrId].matchHistory;
+                    const bestMatch = matchHistory[0];
+                    return {
+                        OcrId: doc.OcrId,
+                        claimId: bestMatch.matchDetails?.claimId,
+                        matchScore: bestMatch.score
+                    };
+                });
+
+            if (!documentsToSort.length) {
+                console.warn('No documents with valid matches to sort');
+                return;
             }
+
+            console.log('Preparing to sort documents:', documentsToSort);
+
+            const response = await fetch(
+                'http://localhost:4000/dms/sort-documents',
+                {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ documents: documentsToSort })
+                }
+            );
+
+            if (!response.ok) {
+                throw new Error('Bulk sort operation failed');
+            }
+
+            const results = await response.json();
+            console.log('Bulk sort completed:', results);
+            onBulkSortComplete?.(results);
+
         } catch (error) {
-            console.error('Error in bulk sort:', error);
-            alert('Failed to sort documents: ' + error.message);
+            console.error('Bulk Sort Error:', error);
         }
     };
 
@@ -400,12 +439,12 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         setBatchProcessing(false);
     };
 
-    const handleSortComplete = (OcrId, result) => {
-        setMatchResults(prev => ({
-            ...prev,
-            [OcrId]: result
-        }));
-    };
+    // const handleSortComplete = (OcrId, result) => {
+    //     setMatchResults(prev => ({
+    //         ...prev,
+    //         [OcrId]: result
+    //     }));
+    // };
 
     const handleProcessDocument = async (OcrId) => {
         if (batchProcessing[OcrId]) return;
@@ -549,20 +588,52 @@ const SuggestedClaims = ({ selectedDocument, selectedDocuments = [], processingE
         );
     };
 
+    const [localMatchResults, setLocalMatchResults] = useState({});
+
+    // Combine passed match results with local ones
+    const combinedMatchResults = useMemo(() => ({
+        ...documentMatchResults,
+        ...localMatchResults
+    }), [documentMatchResults, localMatchResults]);
+
+    const handleSortComplete = (OcrId, result) => {
+        setLocalMatchResults(prev => ({
+            ...prev,
+            [OcrId]: result
+        }));
+    };
+
     return (
         <div className="bg-gray-50 dark:bg-gray-800 relative overflow-hidden shadow-md sm:rounded-lg">
             {/* Header Section */}
             <div className="flex items-center justify-between p-4">
-                <div>
+                <div className="flex items-center space-x-4">
                     <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                         {selectedDocuments.length > 0 ? 'Selected Documents' : 'Document Details'}
                     </h2>
-                    <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                        {selectedDocuments.length > 0 
-                            ? `${selectedDocuments.length} documents selected`
-                            : 'Single document view'
-                        }
-                    </p>
+                    {/* {selectedDocuments.length > 0 && (
+                        <button
+                            onClick={handleBulkSort}
+                            disabled={processing || sortStatus === 'sorting'}
+                            className={`px-4 py-2 rounded-md text-sm font-medium ${
+                                processing || sortStatus === 'sorting'
+                                    ? 'bg-gray-300 cursor-not-allowed'
+                                    : 'text-white'
+                            }`}
+                            style={{ 
+                                backgroundColor: processing || sortStatus === 'sorting' ? '#d1d5db' : '#FF7F50',
+                                borderColor: '#FF6347'
+                            }}
+                        >
+                            {processing ? 'Processing...' : `Bulk Sort (${selectedDocuments.length})`}
+                        </button>
+                    )} */}
+
+<BulkSortManager 
+                selectedDocuments={selectedDocuments}
+                documentMatchResults={combinedMatchResults}
+                onBulkSortComplete={onBulkSortComplete}
+            />
                 </div>
             </div>
             
