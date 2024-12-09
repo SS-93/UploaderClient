@@ -527,38 +527,35 @@ const SuggestedClaims = ({
         }
     };
 
-    const renderMatchResults = (docResults) => {
-        if (!docResults?.matches?.length) {
+    const renderMatchResults = (matchResults) => {
+        if (!matchResults || matchResults.length === 0) {
             return (
-                <div className="p-2 border rounded">
-                    <div className="flex items-center justify-between">
-                        <span className="text-gray-500">No matches found</span>
-                        <div className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-600">Match Score:</span>
-                            <MatchScoreIndicator score={0} />
-                            <span className="text-sm font-medium">0.0%</span>
-                        </div>
-                    </div>
-                </div>
+                <tr>
+                    <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                        No matches found
+                    </td>
+                </tr>
             );
         }
 
-        return (
-            <div className="p-2 border rounded">
-                <div className="flex justify-between items-center">
-                    <span className="font-medium">
-                        {docResults.matches[0]?.claim?.claimNumber || 'No Claim Number'}
-                    </span>
-                    <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-600">Match Score:</span>
-                        <MatchScoreIndicator score={docResults.topScore || 0} />
-                        <span className="text-sm font-medium">
-                            {(docResults.topScore || 0).toFixed(1)}%
-                        </span>
-                    </div>
-                </div>
-            </div>
-        );
+        return matchResults.map((match, index) => (
+            <tr key={index} className={match.isRecommended ? 'bg-green-50' : ''}>
+                <td className="px-6 py-4">
+                    <MatchScoreIndicator 
+                        score={match.score}
+                        matchDetails={{
+                            matchedFields: match.matchedFields,
+                            confidence: match.confidence,
+                            isRecommended: match.isRecommended
+                        }}
+                    />
+                </td>
+                <td className="px-6 py-4">{match.claim.claimNumber}</td>
+                <td className="px-6 py-4">{match.claim.name}</td>
+                <td className="px-6 py-4">{match.claim.employerName}</td>
+                <td className="px-6 py-4">{match.claim.dateOfInjury}</td>
+            </tr>
+        ));
     };
 
     const renderDocumentRow = (doc) => {

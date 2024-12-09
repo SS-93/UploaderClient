@@ -23,14 +23,16 @@ export const findMatchingClaims = async (documentEntities, OcrId) => {
             totalMatches: matchData.totalMatches,
             matchResults: matchData.matchResults.map(match => ({
                 score: match.score,
-                matchedFields: match.matches?.matchedFields || [],
-                confidence: match.matches?.details || {},
+                matchedFields: match.matchedFields,
+                confidence: match.confidence,
+                details: match.details || {},
                 claim: {
-                    claimNumber: match.claim?.claimNumber,
-                    name: match.claim?.name,
-                    physicianName: match.claim?.physicianName,
-                    dateOfInjury: match.claim?.dateOfInjury,
-                    employerName: match.claim?.employerName
+                    id: match.claim.id,
+                    claimNumber: match.claim.claimNumber,
+                    name: match.claim.name,
+                    physicianName: match.claim.physicianName,
+                    dateOfInjury: match.claim.dateOfInjury,
+                    employerName: match.claim.employerName
                 },
                 isRecommended: match.isRecommended
             }))
@@ -165,4 +167,22 @@ export const saveUpdatedEntities = async (OcrId, updatedEntities) => {
         console.error('Error saving updated entities:', error);
         throw error;
     }
+};
+
+export const formatMatchResults = (matchData) => {
+    return {
+        score: matchData.score,
+        matchedFields: matchData.matchedFields || [],
+        confidence: matchData.confidence || {},
+        details: matchData.details || {},
+        isRecommended: matchData.isRecommended,
+        claim: {
+            id: matchData.claim.id,
+            claimNumber: matchData.claim.claimNumber,
+            name: matchData.claim.name,
+            employerName: matchData.claim.employerName,
+            dateOfInjury: matchData.claim.dateOfInjury,
+            physicianName: matchData.claim.physicianName
+        }
+    };
 };
