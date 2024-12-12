@@ -6,6 +6,7 @@ import AllClaims from '../allclaims/AllClaims';
 import SuggestedClaims from '../suggestedclaims/SuggestedClaims';
 import MatchDetails from '../claimquerymatrix/MatchDetails';
 import SingleDocumentProcessor from '../singledocumentprocessor/SingleDocumentProcessor';
+import MatchScoreIndicator from '../suggestedclaims/MatchScoreIndicator';
 
 function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
   const [entities, setEntities] = useState(null);
@@ -180,6 +181,26 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
     return (
       <div className="space-y-4">
         <h3 className="text-lg font-semibold">Match Results</h3>
+        <MatchScoreIndicator 
+          selectedOcrId={selectedOcrId}
+          matchResults={{
+            topScore: matchResults[0]?.score || 0,
+            totalMatches: matchResults.length,
+            matchResults: matchResults.map(match => ({
+              score: match.score,
+              matchedFields: match.matches?.matchedFields || [],
+              confidence: match.matches?.confidence || {},
+              matchDetails: {
+                claimNumber: match.claim?.claimNumber,
+                claimantName: match.claim?.name,
+                physicianName: match.claim?.physicianName,
+                dateOfInjury: match.claim?.dateOfInjury,
+                employerName: match.claim?.employerName
+              },
+              isRecommended: match.isRecommended
+            }))
+          }}
+        />
         {matchResults.map((match, index) => (
           <div key={index} className="border rounded-lg p-4 bg-white">
             <div className="flex justify-between items-center mb-2">

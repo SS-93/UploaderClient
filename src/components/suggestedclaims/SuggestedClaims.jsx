@@ -6,6 +6,9 @@ import DocumentSortManager from '../documentsort/DocumentSortManager';
 import MatchHistoryCell from './MatchHistoryCell';
 import SingleDocumentProcessor from '../singledocumentprocessor/SingleDocumentProcessor';
 import BulkSortManager from '../bulksort/BulkSortManager';
+
+import matchDisplayUtils from '../../utils/matchDisplayUtils';
+
 const SuggestedClaims = ({ 
     selectedDocument, 
     selectedDocuments = [], 
@@ -15,6 +18,7 @@ const SuggestedClaims = ({
     onBulkSortComplete, 
     aiMatchResults,
     sortResults,
+    onProcess
 }) => {
     const { 
         detailedMatches, 
@@ -28,8 +32,76 @@ const SuggestedClaims = ({
         processBatch
     } = useContext(MatchContext);
 
-    // Add state for match results with default empty object
-    const [matchResults, setMatchResults] = useState({});
+    const [matchResults, setMatchResults] = useState(null);
+    const [isProcessing, setIsProcessing] = useState(false);
+
+    const handleDocumentSelect = async (document) => {
+        console.log('📄 Document selected:', document);
+        
+        if (!document?.OcrId) {
+            console.warn('⚠️ Selected document has no OcrId');
+            return;
+        }
+
+        setIsProcessing(true);
+        try {
+            // First get the OCR text
+            console.log('🔍 Fetching OCR text for document:', document.OcrId);
+            const ocrResponse = await fetch(`http://localhost:4000/dms/ocr-text/${document.OcrId}`);
+            
+            if (!ocrResponse.ok) {
+                throw new Error('Failed to fetch OCR text');
+            }
+            
+            const ocrData = await ocrResponse.json();
+            console.log('📝 Received OCR text:', ocrData);
+
+            // Then get match history
+            console.log('🔄 Fetching match history');
+            const matchResponse = await fetch(`http://localhost:4000/ai/match-history/${document.OcrId}`);
+            
+            if (!matchResponse.ok) {
+                throw new Error('Failed to fetch match history');
+            }
+            
+            const matchData = await matchResponse.json();
+            console.log('📊 Received match data:', matchData);
+
+            // Format match results
+            const formattedResults = {
+                topScore: matchData.topScore,
+                totalMatches: matchData.totalMatches,
+                matchResults: matchData.matchResults?.map(match => ({
+                    score: match.score,
+                    matchedFields: match.matches?.matchedFields || [],
+                    confidence: match.matches?.confidence || {},
+                    matchDetails: {
+                        claimNumber: match.claim?.claimNumber,
+                        claimantName: match.claim?.name,
+                        physicianName: match.claim?.physicianName,
+                        dateOfInjury: match.claim?.dateOfInjury,
+                        employerName: match.claim?.employerName
+                    },
+                    isRecommended: match.isRecommended
+                }))
+            };
+
+            console.log('✨ Formatted match results:', formattedResults);
+            setMatchResults(formattedResults);
+
+        } catch (error) {
+            console.error('❌ Error processing document:', error);
+        } finally {
+            setIsProcessing(false);
+        }
+    };
+
+    useEffect(() => {
+        if (selectedDocument) {
+            console.log('🔄 Selected document changed:', selectedDocument);
+            handleDocumentSelect(selectedDocument);
+        }
+    }, [selectedDocument]);
 
     // Add state for batch processing
     const [batchId, setBatchId] = useState(null);
@@ -116,10 +188,29 @@ const SuggestedClaims = ({
     };
 
     const getBestMatch = () => {
-        if (!detailedMatches || detailedMatches.length === 0) return null;
-        return detailedMatches.reduce((best, current) => {
-            return (current.score > (best?.score || 0)) ? current : best;
-        }, null);
+        // Check if we have match results
+        if (!documentMatchResults || !selectedDocument) return null;
+        
+        // Get matches for current document
+        const currentDocumentMatches = documentMatchResults[selectedDocument.OcrId];
+        
+        if (!currentDocumentMatches || !currentDocumentMatches.matchResults) {
+            return null;
+        }
+        
+        // Sort matches by score and get the highest
+        const sortedMatches = [...currentDocumentMatches.matchResults].sort((a, b) => b.score - a.score);
+        
+        return sortedMatches[0] || {
+            score: 0,
+            matches: {
+                matchedFields: [],
+                confidence: {},
+                details: {}
+            },
+            isRecommended: false,
+            claim: null
+        };
     };
 
     // Add viewDetails function
@@ -358,6 +449,8 @@ const SuggestedClaims = ({
                             dateOfInjury: bestMatch?.claim?.date || '',
                             physicianName: bestMatch?.claim?.physicianName || ''
                         }}
+                        matches={bestMatch?.matches}
+                        matchResults={bestMatch?.matchResults}      s
                     />
                 </td>
                 <td className="px-6 py-4">

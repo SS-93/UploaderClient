@@ -55,6 +55,20 @@ function AILab() {
                     return;
                 }
 
+                try {
+                    const matchResponse = await fetch(`http://localhost:4000/ai/suggested-claims/${documentData.OcrId}`);
+                    if (matchResponse.ok) {
+                        const matchData = await matchResponse.json();
+                        setMatchResults(matchData.matchResults);
+                        setDocumentMatchResults(prev => ({
+                            ...prev,
+                            [documentData.OcrId]: matchData.matchResults[0] || {}
+                        }));
+                    }
+                } catch (error) {
+                    console.error('Error fetching match data:', error);
+                }
+
                 // Fallback to fetching OCR text if not present
                 const response = await fetch(`http://localhost:4000/dms/ocr-text/${documentData.OcrId}`);
                 if (!response.ok) {
@@ -294,7 +308,7 @@ function AILab() {
                     bulkSortStatus={bulkSortStatus}
                     onBulkSortComplete={handleBulkSortComplete}
                     sortResults={sortResults}
-                    ai
+                    currentMatchData={documentMatchResults[selectedDocument?.OcrId] || {}}
                 />
                 <DocumentDashboard
                     onSelectDocument={handleSelectDocument}

@@ -1,5 +1,10 @@
 export const performNER = async (text, OcrId) => {
     try {
+        console.log('Sending NER request:', {
+            textLength: text.length,
+            OcrId
+        });
+
         const response = await fetch('http://localhost:4000/ai/perform-ner', {
             method: 'POST',
             headers: {
@@ -8,18 +13,24 @@ export const performNER = async (text, OcrId) => {
             body: JSON.stringify({ text, OcrId }),
         });
 
+        const data = await response.json();
+
         if (!response.ok) {
-            throw new Error('Failed to perform NER');
+            throw new Error(data.details || data.error || 'Failed to perform NER');
         }
 
-        const data = await response.json();
+        console.log('NER Response:', data);
+
         return {
-            entities: data.entities || data,
+            entities: data.entities || {},
             matchResults: data.matchResults || [],
             document: data.document
         };
     } catch (error) {
-        console.error('Error performing NER:', error);
+        console.error('Error performing NER:', {
+            message: error.message,
+            OcrId
+        });
         throw error;
     }
 };
