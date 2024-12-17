@@ -527,11 +527,11 @@ const SuggestedClaims = ({
                                     </div>
                                 </td>
                                 
-                                <td className="px-4 py-4">
-                                    <div className="text-sm">
-                                        {bestMatch?.claim?.claimNumber || 'No match'}
-                                    </div>
-                                </td>
+                                <td className="px-4 py-4 text-center align-middle">
+    <div className="text-sm">
+        {selectedDocument?.matchHistory?.[0]?.matchDetails?.claimNumber || 'No match'}
+    </div>
+</td>
                                 
                                 <td className="px-4 py-4">
                                     <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
