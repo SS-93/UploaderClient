@@ -15,6 +15,8 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
   const [isEditing, setIsEditing] = useState(false);
   const [matchResults, setMatchResults] = useState([]);
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  
 
   const { findMatches, getMatchHistory, matchHistory } = useContext(MatchContext);
 
@@ -259,15 +261,26 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
 
         const data = await response.json();
         console.log('Match results saved:', data);
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 3000); // Hide after 3 seconds
         onSave && onSave(data);
-      } catch (error) {
+    } catch (error) {
         console.error('Error saving match results:', error);
-      }
-    };
+    }
+};
+
 
     return (
       <div className="mt-4 p-4 bg-white rounded-lg shadow">
         <h3 className="text-lg font-semibold mb-2">Save Match Results</h3>
+        {showSuccess && (
+                <div className="mb-4 p-1.5 bg-green-100 border border-green-400 text-green-700 rounded flex items-center text-sm">
+                <svg className="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
+                </svg>
+                Match Results Saved Successfully
+            </div>
+            )}
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <p className="text-sm text-gray-600">
