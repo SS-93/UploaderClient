@@ -318,6 +318,8 @@ function AILab() {
                     sortResults={sortResults[selectedDocument?.OcrId]}
                     selectedDocuments={selectedDocuments}
                     setSelectedDocuments={setSelectedDocuments}
+                    documentMatchResults={documentMatchResults}
+                    currentMatchData={documentMatchResults[selectedDocument?.OcrId]}
                 />
                 <ModelMetrics />
             </div>

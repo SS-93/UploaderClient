@@ -8,7 +8,7 @@ import SuggestedClaims from '../../suggestedclaims/SuggestedClaims';
 import { findMatchingClaims } from '../../../utils/matchingLogic';
 import SingleDocumentProcessor from '../../singledocumentprocessor/SingleDocumentProcessor';
 
-function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange, processingEnabled, selectedDocuments = [], setSelectedDocuments }) {
+function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange, processingEnabled, selectedDocuments = [], setSelectedDocuments, onBulkSortComplete, aiMatchResults, sortResults, onProcess }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
   const [parkedDocuments, setParkedDocuments] = useState([]);
@@ -217,18 +217,25 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
   //   setSelectedDocumentId(documentId);
   //   onSelectDocument(documentId); // Call the parent function to update OCR ID
   // };
+  // Modify the existing row click handler to use handleDocumentSelect
   const handleRowClickII = async (document) => {
     setSelectedDocumentId(document.OcrId);
     
     try {
-        // First, fetch the full document details including text content
+        // We fetch OCR text but we're not fetching match history here
         const response = await fetch(`http://localhost:4000/dms/ocr-text/${document.OcrId}`);
         if (!response.ok) {
             throw new Error('Failed to fetch document details');
         }
         const fullDocument = await response.json();
 
-        // Prepare the document data with all necessary fields
+        // We should also fetch match history here
+        const matchHistoryResponse = await fetch(`http://localhost:4000/ai/match-history/${document.OcrId}`);
+        if (!matchHistoryResponse.ok) {
+            throw new Error('Failed to fetch match history');
+        }
+        const matchHistory = await matchHistoryResponse.json();
+
         const documentData = {
             OcrId: document.OcrId,
             textContent: fullDocument.textContent || document.textContent || '',
@@ -237,19 +244,20 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
             uploadDate: document.uploadDate || fullDocument.uploadDate || new Date().toISOString(),
             matchScore: document.matchScore || 0,
             suggestedClaims: document.suggestedClaims || [],
-            // Add any additional NER-related fields
             entities: fullDocument.entities || {},
-            matchResults: fullDocument.matchResults || []
+            matchResults: fullDocument.matchResults || [],
+            // Add match history here
+            matchHistory: matchHistory.matchHistory || [] // This was missing!
         };
 
         console.log('DocumentDashboard - Document clicked:', documentData);
         
-        // Trigger NER and scoring through onSelectDocument
+        handleDocumentSelect(documentData);
         onSelectDocument(documentData);
 
     } catch (error) {
         console.error('Error preparing document data:', error);
-        // Still send basic document data if fetch fails
+        // Update fallback to include empty match history
         const fallbackData = {
             OcrId: document.OcrId,
             textContent: document.textContent || '',
@@ -257,13 +265,13 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
             category: document.category || 'Uncategorized',
             uploadDate: document.uploadDate || new Date().toISOString(),
             matchScore: 0,
-            suggestedClaims: []
+            suggestedClaims: [],
+            matchHistory: [] // Add empty match history to fallback
         };
+        handleDocumentSelect(fallbackData);
         onSelectDocument(fallbackData);
     }
 };
-
-
 
   const handleViewDocument = (fileUrl, documentId) => {
     if (onViewDocument) {
@@ -547,24 +555,66 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
         console.error('Invalid document data:', selectedDocuments);
     }
   }, [selectedDocuments]);
-
   const handleDocumentSelect = async (document) => {
-    // If document is already processed, use cached results
-    if (!matchResults[document.OcrId]) {
-        try {
-            const results = await findMatchingClaims(document.entities);
-            setMatchResults(prev => ({
-                ...prev,
-                [document.OcrId]: results
-            }));
-        } catch (error) {
-            console.error('Error processing document:', error);
-        }
-    }
+    console.log('📄 Document selected:', document);
     
-    setSelectedDocuments(prev => [...prev, document]);
-  };
+    if (!document?.OcrId) {
+        console.warn('⚠️ Selected document has no OcrId');
+        return;
+    }
 
+    setLoading(true); // Assuming setIsProcessing was intended to be setLoading
+
+    try {
+        // Fetch OCR text
+        const ocrResponse = await fetch(`http://localhost:4000/dms/ocr-text/${document.OcrId}`);
+        
+        if (!ocrResponse.ok) {
+            throw new Error('Failed to fetch OCR text');
+        }
+        
+        const ocrData = await ocrResponse.json();
+
+        // Fetch match history
+        const matchResponse = await fetch(`http://localhost:4000/ai/match-history/${document.OcrId}`);
+        
+        if (!matchResponse.ok) {
+            throw new Error('Failed to fetch match history');
+        }
+        
+        const matchData = await matchResponse.json();
+
+        // Format match results
+        const formattedResults = {
+            topScore: matchData.topScore,
+            totalMatches: matchData.totalMatches,
+            matchResults: matchData.matchResults?.map(match => ({
+                score: match.score,
+                matchedFields: match.matches?.matchedFields || [],
+                confidence: match.matches?.confidence || {},
+                matchDetails: {
+                    claimNumber: match.claim?.claimNumber,
+                    claimantName: match.claim?.name,
+                    physicianName: match.claim?.physicianName,
+                    dateOfInjury: match.claim?.dateOfInjury,
+                    employerName: match.claim?.employerName
+                },
+                isRecommended: match.isRecommended
+            }))
+        };
+
+        console.log('✨ Formatted match results:', formattedResults);
+        setDocumentMatchResults(prev => ({
+            ...prev,
+            [document.OcrId]: formattedResults // Storing match results keyed by OcrId
+        }));
+
+    } catch (error) {
+        console.error('❌ Error processing document:', error);
+    } finally {
+        setLoading(false);
+    }
+};
   return (
     <div>
       {showLoadingBar ? (
@@ -876,16 +926,24 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
 
       <SuggestedClaims 
         selectedDocuments={selectedDocuments}
-        matchResults={Object.values(matchResults)}
+        documentMatchResults={documentMatchResults}
+        // bulkSortStatus={bulkSortStatus}
+        onBulkSortComplete={onBulkSortComplete}
+        aiMatchResults={aiMatchResults}
+        sortResults={sortResults}
+        onProcess={onProcess}
+        
       />
 
       {selectedDocuments.map(doc => doc && (
         <SingleDocumentProcessor
             key={doc.OcrId}
             document={doc}
+            onBulkSortComplete={onBulkSortComplete}
+            aiMatchResults={aiMatchResults}
             matchResults={documentMatchResults[doc.OcrId] || {}}
             onProcessComplete={(ocrId, results) => {
-                setMatchResults(prev => ({
+                setDocumentMatchResults(prev => ({
                     ...prev,
                     [ocrId]: results
                 }));
@@ -902,7 +960,11 @@ DocumentDashboard.propTypes = {
     onSelectionChange: PropTypes.func,
     processingEnabled: PropTypes.bool,
     selectedDocuments: PropTypes.array,
-    setSelectedDocuments: PropTypes.func
+    setSelectedDocuments: PropTypes.func,
+    onBulkSortComplete: PropTypes.func,
+    aiMatchResults: PropTypes.object,
+    sortResults: PropTypes.object,
+    onProcess: PropTypes.func
 };
 
 DocumentDashboard.defaultProps = {

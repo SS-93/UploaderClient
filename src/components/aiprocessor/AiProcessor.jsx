@@ -207,7 +207,7 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
               <h4 className="font-medium">Claim: {match.claim.claimNumber}</h4>
               <span className="text-sm text-gray-500">Score: {match.score}%</span>
             </div>
-            <MatchDetails matchDetails={match} />
+            {/* <MatchDetails matchDetails={match} /> */}
           </div>
         ))}
       </div>
@@ -295,14 +295,14 @@ function AiProcessor({ selectedOcrId, ocrText, processingEnabled }) {
         <section className="bg-white dark:bg-gray-900">
           <div className="py-8 px-4 mx-auto max-w-screen-xl lg:py-16">
             <div className="mb-8">
-              <SuggestedClaims 
+              {/* <SuggestedClaims 
                 selectedDocument={selectedDocument}
                 matchResults={matchResults}
               />
               <SingleDocumentProcessor
                 selectedDocument={selectedDocument}
                 matchResults={matchResults}
-              />
+              /> */}
             </div>
             <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-8 md:p-12 mb-8">
               <a

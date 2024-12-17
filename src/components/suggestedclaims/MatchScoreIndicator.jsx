@@ -121,6 +121,7 @@ const MatchScoreIndicator = ({ selectedOcrId, matchResults }) => {
                                 <span className="text-yellow-600">Review Needed</span>
                             }
                         </div>
+                        
                     </div>
                 </div>
             )}
@@ -130,7 +131,7 @@ const MatchScoreIndicator = ({ selectedOcrId, matchResults }) => {
 
 // Utility function for score colors
 const getScoreColorClass = (score) => {
-    if (score >= 70) return 'bg-green-500';
+    if (score >= 60) return 'bg-green-500';
     if (score >= 45) return 'bg-yellow-500';
     return 'bg-red-500';
 };

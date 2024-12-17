@@ -13,7 +13,7 @@ export const SCORE_WEIGHTS = {
 
 // Get the status class based on score
 export const getStatusClass = (score) => {
-    if (score >= 70) return 'bg-green-500';
+    if (score >= 60) return 'bg-green-500';
     if (score >= 45) return 'bg-yellow-500';
     return 'bg-red-500';
 };
@@ -32,25 +32,23 @@ export const getFieldPoints = (field) => {
 
 // Format field names for display
 export const getFieldLabel = (field) => {
-    const fieldLabels = {
-        'claimNumber': 'Claim Number',
-        'name': 'Claimant Name',
-        'dateOfInjury': 'Date of Injury',
-        'employerName': 'Employer Name',
-        'physicianName': 'Physician Name'
+    const labels = {
+        claimNumber: 'Claim Number',
+        name: 'Claimant Name',
+        physicianName: 'Physician Name',
+        dateOfInjury: 'Date of Injury',
+        employerName: 'Employer Name'
     };
-    return fieldLabels[field] || field;
+    return labels[field] || field;
 };
 
 // Format field values for display
-export const formatFieldValue = (key, value) => {
+export const formatFieldValue = (field, value) => {
     if (!value) return 'N/A';
-
-    switch (key) {
+    
+    switch (field) {
         case 'dateOfInjury':
             return new Date(value).toLocaleDateString();
-        case 'confidence':
-            return `${Math.round(value * 100)}%`;
         default:
             return value;
     }
@@ -72,9 +70,9 @@ export const formatConfidence = (confidence) => {
 
 // Get match quality indicator
 export const getMatchQuality = (score) => {
-    if (score >= 70) return { label: 'Strong Match', color: 'text-green-600' };
-    if (score >= 45) return { label: 'Possible Match', color: 'text-yellow-600' };
-    return { label: 'Weak Match', color: 'text-red-600' };
+    if (score >= 60) return 'bg-green-100 text-green-800';
+    if (score >= 45) return 'bg-yellow-100 text-yellow-800';
+    return 'bg-red-100 text-red-800';
 };
 
 // Format match history for display

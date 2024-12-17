@@ -6,7 +6,7 @@ import DocumentSortManager from '../documentsort/DocumentSortManager';
 import MatchHistoryCell from './MatchHistoryCell';
 import SingleDocumentProcessor from '../singledocumentprocessor/SingleDocumentProcessor';
 import BulkSortManager from '../bulksort/BulkSortManager';
-
+import MatchDetails from '../claimquerymatrix/MatchDetails';
 import matchDisplayUtils from '../../utils/matchDisplayUtils';
 
 const SuggestedClaims = ({ 
@@ -189,27 +189,22 @@ const SuggestedClaims = ({
 
     const getBestMatch = () => {
         // Check if we have match results
-        if (!documentMatchResults || !selectedDocument) return null;
+        if (!documentMatchResults || !selectedDocument?.OcrId) return null;
         
         // Get matches for current document
         const currentDocumentMatches = documentMatchResults[selectedDocument.OcrId];
         
-        if (!currentDocumentMatches || !currentDocumentMatches.matchResults) {
+        if (!currentDocumentMatches?.matchResults?.length) {
             return null;
         }
         
-        // Sort matches by score and get the highest
-        const sortedMatches = [...currentDocumentMatches.matchResults].sort((a, b) => b.score - a.score);
-        
-        return sortedMatches[0] || {
+        // Return the first match (should be best match)
+        return currentDocumentMatches.matchResults[0] || {
             score: 0,
-            matches: {
-                matchedFields: [],
-                confidence: {},
-                details: {}
-            },
-            isRecommended: false,
-            claim: null
+            matchedFields: [],
+            confidence: {},
+            claim: null,
+            isRecommended: false
         };
     };
 
@@ -297,31 +292,83 @@ const SuggestedClaims = ({
 
     // Add renderCheckedDocuments function
     const renderCheckedDocuments = () => {
-        // Ensure selectedDocuments is an array before mapping
-        if (!Array.isArray(selectedDocuments)) return null;
-
-        return selectedDocuments.map((doc) => (
-            <tr key={doc.OcrId} className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                {/* Document Name */}
-                <td className="px-6 py-4 font-medium text-gray-900 dark:text-white">
+        return selectedDocuments.map((doc, index) => (
+            <tr key={doc.OcrId || index} className="border-t">
+                <td className="px-4 py-4 text-sm font-medium text-gray-900">
                     {doc.fileName}
                 </td>
-
-                {/* Match Score */}
-                <td className="px-6 py-4">
-                    <SingleDocumentProcessor 
-                        document={doc}
-                        matchResults={matchResults[doc.OcrId]}
+                
+                <td className="px-4 py-4">
+                    <div className="space-y-2">
+                        {/* Score Progress Bar */}
+                        <div className="flex items-center space-x-2">
+                            <div className="h-2 flex-grow bg-gray-200 rounded">
+                                <div 
+                                    className={`h-2 rounded ${
+                                        doc?.matchHistory?.[0]?.score >= 60 ? 'bg-green-500' :
+                                        doc?.matchHistory?.[0]?.score >= 45 ? 'bg-yellow-500' :
+                                        'bg-red-500'
+                                    }`}
+                                    style={{ width: `${doc?.matchHistory?.[0]?.score || 0}%` }}
+                                ></div>
+                            </div>
+                            <span className="text-sm font-medium">
+                                {doc?.matchHistory?.[0]?.score?.toFixed(2) || 0}%
+                            </span>
+                        </div>
                         
-                    />
-                    <MatchScoreIndicator 
-                        score={matchResults[doc.OcrId]?.topScore || 0}
-                        matchDetails={matchResults[doc.OcrId]?.matchResults?.[0]}
-                    />
+                        {/* Claim Details */}
+                        {doc?.matchHistory?.[0]?.matchDetails && (
+                            <div className="space-y-1">
+                                <div className="inline-flex px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                    Claim: {doc.matchHistory[0].matchDetails.claimNumber}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                    Claimant: {doc.matchHistory[0].matchDetails.claimantName}
+                                </div>
+                                <div className="text-sm text-gray-600">
+                                    Physician: {doc.matchHistory[0].matchDetails.physicianName}
+                                </div>
+                            </div>
+                        )}
+                    </div>
                 </td>
+                
+                <td className="px-4 py-4">
+                    <div className="text-sm">
+                        {doc?.matchHistory?.[0]?.matchDetails?.claimNumber || 'No match'}
+                    </div>
+                </td>
+                
+                <td className="px-4 py-4">
+                    <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                        doc?.matchHistory?.[0]?.score >= 60 ? 'bg-green-100 text-green-800' :
+                        doc?.matchHistory?.[0]?.score >= 45 ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                    }`}>
+                        {loading ? 'Loading...' : error ? 'Error' : 'Ready'}
+                    </span>
+                </td>
+                
+                <td className="px-4 py-4 space-x-2 flex items-center">
+                    
+                    
+                    {/* <SingleDocumentProcessor
+                        document={doc}
+                        onBulkSortComplete={onBulkSortComplete}
+                        aiMatchResults={aiMatchResults}
+                        matchResults={documentMatchResults[doc.OcrId] || {}}
+                        // onProcessComplete={(ocrId, results) => {
+                        //     setDocumentMatchResults(prev => ({
+                        //         ...prev,
+                        //         [ocrId]: results
+                        //     }));
+                        // }}
+                        sortResults={sortResults}
+                        onProcess={onProcess}
+                    /> */}
 
-                {/* Match History & Sort Manager */}
-                <td className="px-6 py-4">
+                    {/* Add DocumentSortManager here */}
                     <DocumentSortManager 
                         document={doc}
                         documents={selectedDocuments}
@@ -341,24 +388,9 @@ const SuggestedClaims = ({
                             });
                         }}
                     />
-                </td>
-
-                {/* Status */}
-                <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                        loading ? 'bg-yellow-100 text-yellow-800' :
-                        error ? 'bg-red-100 text-red-800' :
-                        'bg-green-100 text-green-800'
-                    }`}>
-                        {loading ? 'Processing' : error ? 'Error' : 'Ready'}
-                    </span>
-                </td>
-
-                {/* Actions */}
-                <td className="px-6 py-4 text-right">
                     <button 
+                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                         onClick={() => viewDetails(doc.OcrId)}
-                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
                     >
                         Details
                     </button>
@@ -430,50 +462,133 @@ const SuggestedClaims = ({
     const renderSingleDocument = () => {
         if (!selectedDocument) return null;
 
-        const bestMatch = getBestMatch();
+        // Log the match history to debug
+        console.log('Match History:', selectedDocument.matchHistory);
 
+        const bestMatch = getBestMatch();
+        
+        const matchData = documentMatchResults[selectedDocument.OcrId];
+        
         return (
-            <tr className="bg-white border-b dark:bg-gray-800 dark:border-gray-700">
-                <th scope="row" className="px-6 py-4 font-medium text-gray-900 dark:text-white">
-                    {selectedDocument.fileName || 'Unnamed Document'}
-                </th>
-                <td className="px-6 py-4">
-                    <MatchScoreIndicator 
-                        score={bestMatch?.score || 0}
-                        matchDetails={{
-                            isRecommended: bestMatch?.isRecommended || false,
-                            matchedFields: bestMatch?.matches?.matchedFields || [],
-                            confidence: bestMatch?.matches?.confidence || {},
-                            claimNumber: bestMatch?.claim?.claimNumber || '',
-                            claimantName: bestMatch?.claim?.name || '',
-                            dateOfInjury: bestMatch?.claim?.date || '',
-                            physicianName: bestMatch?.claim?.physicianName || ''
-                        }}
-                        matches={bestMatch?.matches}
-                        matchResults={bestMatch?.matchResults}      s
-                    />
-                </td>
-                <td className="px-6 py-4">
-                    {bestMatch?.claim?.claimNumber || 'No match'}
-                </td>
-                <td className="px-6 py-4">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                        loading ? 'bg-yellow-100 text-yellow-800' :
-                        error ? 'bg-red-100 text-red-800' :
-                        'bg-green-100 text-green-800'
-                    }`}>
-                        {loading ? 'Processing' : error ? 'Error' : 'Ready'}
-                    </span>
-                </td>
-                <td className="px-6 py-4 text-right">
-                    <button 
-                        onClick={() => viewDetails(selectedDocument.OcrId)}
-                        className="font-medium text-blue-600 dark:text-blue-500 hover:underline"
-                    >
-                        Details
-                    </button>
-                </td>
-            </tr>
+            <div className="bg-white rounded-lg shadow">
+                <div className="px-6 py-4">
+                    <h2 className="text-xl font-semibold mb-2">Document Details</h2>
+                    <p className="text-sm text-gray-600 mb-4">Single document view</p>
+                    
+                    <table className="w-full">
+                        <thead className="bg-gray-50">
+                            <tr>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">DOCUMENT</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">MATCH SCORE</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">BEST MATCH</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">STATUS</th>
+                                <th className="px-4 py-2 text-left text-sm font-medium text-gray-500">ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr className="border-t">
+                                <td className="px-4 py-4 text-sm font-medium text-gray-900">
+                                    {selectedDocument.fileName}
+                                </td>
+                                
+                                <td className="px-4 py-4">
+                                    <div className="space-y-2">
+                                        {/* Score Progress Bar */}
+                                        <div className="flex items-center space-x-2">
+                                            <div className="h-2 flex-grow bg-gray-200 rounded">
+                                                <div 
+                                                    className={`h-2 rounded ${
+                                                        selectedDocument?.matchHistory?.[0]?.score >= 60 ? 'bg-green-500' :
+                                                        selectedDocument?.matchHistory?.[0]?.score >= 45 ? 'bg-yellow-500' :
+                                                        'bg-red-500'
+                                                    }`}
+                                                    style={{ width: `${selectedDocument?.matchHistory?.[0]?.score || 0}%` }}
+                                                ></div>
+                                            </div>
+                                            <span className="text-sm font-medium">
+                                                {selectedDocument?.matchHistory?.[0]?.score?.toFixed(2) || 0}%
+                                            </span>
+                                        </div>
+                                        
+                                        {/* Claim Details */}
+                                        {selectedDocument?.matchHistory?.[0]?.matchDetails && (
+                                            <div className="space-y-1">
+                                                <div className="inline-flex px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded">
+                                                    Claim: {selectedDocument.matchHistory[0].matchDetails.claimNumber}
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    Claimant: {selectedDocument.matchHistory[0].matchDetails.claimantName}
+                                                </div>
+                                                <div className="text-sm text-gray-600">
+                                                    Physician: {selectedDocument.matchHistory[0].matchDetails.physicianName}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </td>
+                                
+                                <td className="px-4 py-4">
+                                    <div className="text-sm">
+                                        {bestMatch?.claim?.claimNumber || 'No match'}
+                                    </div>
+                                </td>
+                                
+                                <td className="px-4 py-4">
+                                    <span className="inline-flex px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                        Ready
+                                    </span>
+                                </td>
+                                
+                                <td className="px-4 py-4 space-x-2 flex items-center">
+                                   
+{/*                                     
+                                    <SingleDocumentProcessor
+                                        document={selectedDocument}
+                                        onBulkSortComplete={onBulkSortComplete}
+                                        aiMatchResults={aiMatchResults}
+                                        matchResults={documentMatchResults[selectedDocument.OcrId] || {}}
+                                        // onProcessComplete={(ocrId, results) => {
+                                        //     setDocumentMatchResults(prev => ({
+                                        //         ...prev,
+                                        //         [ocrId]: results
+                                        //     }));
+                                        // }}
+                                        sortResults={sortResults}
+                                        onProcess={onProcess}
+                                    /> */}
+
+                                    {/* Add DocumentSortManager here */}
+                                    <DocumentSortManager 
+                                        document={selectedDocument}
+                                        documents={selectedDocuments}
+                                        documentMatchResults={documentMatchResults}
+                                        onSortComplete={(result) => {
+                                            setMatchResults(prev => ({
+                                                ...prev,
+                                                [selectedDocument.OcrId]: result
+                                            }));
+                                        }}
+                                        onBulkSortComplete={(results) => {
+                                            results.successful.forEach(result => {
+                                                setMatchResults(prev => ({
+                                                    ...prev,
+                                                    [result.OcrId]: result
+                                                }));
+                                            });
+                                        }}
+                                    />
+                                     <button 
+                                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+                                        onClick={() => viewDetails(selectedDocument.OcrId)}
+                                    >
+                                        Details
+                                    </button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
         );
     };
 

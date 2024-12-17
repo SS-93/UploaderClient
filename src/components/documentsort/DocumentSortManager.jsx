@@ -16,9 +16,14 @@ const DocumentSortManager = ({
 
     useEffect(() => {
         if (document?.OcrId) {
-            loadMatchHistory();
+            // Check if we already have match results
+            if (documentMatchResults?.[document.OcrId]) {
+                setMatchHistory(documentMatchResults[document.OcrId]);
+            } else {
+                loadMatchHistory();
+            }
         }
-    }, [document?.OcrId]);
+    }, [document?.OcrId, documentMatchResults]);
 
     const loadMatchHistory = async () => {
         try {
@@ -40,9 +45,9 @@ const DocumentSortManager = ({
         console.log('Match History:', matchHistory);
 
         try {
-            // Get the latest match from history
-            const latestMatch = matchHistory?.matchHistory?.[0];
-            const targetClaimNumber = latestMatch?.matchDetails?.claimNumber;
+            // Get the best match from matchResults array
+            const bestMatch = matchHistory?.matchResults?.[0];
+            const targetClaimNumber = bestMatch?.claim?.claimNumber;
 
             if (!targetClaimNumber) {
                 throw new Error('No target claim number found in match history');
@@ -61,10 +66,9 @@ const DocumentSortManager = ({
                 OcrId: document.OcrId,
                 targetClaimNumber,
                 claimId,
-                confidence: latestMatch.score
+                confidence: bestMatch.score
             });
 
-            // Use the correct endpoint
             const response = await fetch(
                 `http://localhost:4000/dms/sort-document/${claimId}/${document.OcrId}`, 
                 {
@@ -74,7 +78,7 @@ const DocumentSortManager = ({
                     },
                     body: JSON.stringify({
                         claimNumber: targetClaimNumber,
-                        matchScore: latestMatch.score
+                        matchScore: bestMatch.score
                     })
                 }
             );
@@ -129,7 +133,7 @@ const DocumentSortManager = ({
     };
 
     const getConfidenceClass = (score) => {
-        if (score >= 75) return 'bg-green-100 text-green-800';
+        if (score >= 60) return 'bg-green-100 text-green-800';
         if (score >= 46) return 'bg-yellow-100 text-yellow-800';
         return 'bg-red-100 text-red-800';
     };
@@ -137,21 +141,21 @@ const DocumentSortManager = ({
     return (
         <div className="flex items-center space-x-4">
             <div className="flex-1">
-                {matchHistory && matchHistory.matchHistory?.[0] && (
+                {matchHistory?.matchResults?.[0] && (
                     <div className="text-sm">
                         <div className="flex items-center space-x-2">
                             <span className="font-medium">
-                                Best Match: {matchHistory.matchHistory[0].matchDetails?.claimNumber || 'No match'}
+                                Best Match: {matchHistory.matchResults[0].claim?.claimNumber || 'No match'}
                             </span>
                             <span className={`px-2 py-1 rounded-full text-xs ${
-                                getConfidenceClass(matchHistory.matchHistory[0].score)
+                                getConfidenceClass(matchHistory.matchResults[0].score)
                             }`}>
-                                {matchHistory.matchHistory[0].score?.toFixed(1)}%
+                                {matchHistory.matchResults[0].score?.toFixed(1)}%
                             </span>
                         </div>
-                        {matchHistory.matchHistory[0].matchedFields && (
+                        {matchHistory.matchResults[0].matches?.matchedFields && (
                             <div className="text-xs text-gray-500 mt-1">
-                                Matched: {matchHistory.matchHistory[0].matchedFields.join(', ')}
+                                Matched: {matchHistory.matchResults[0].matches.matchedFields.join(', ')}
                             </div>
                         )}
                     </div>
@@ -165,34 +169,17 @@ const DocumentSortManager = ({
                 {sortStatus === 'error' && (
                     <span className="text-red-600 text-sm">⚠ Error</span>
                 )}
-                {/* Regular Sort Button */}
                 <button
                     onClick={handleSort}
-                    disabled={sortStatus === 'sorting'}
+                    disabled={sortStatus === 'sorting' || !matchHistory?.matchResults?.[0]}
                     className={`px-3 py-1 rounded-md text-sm ${
-                        sortStatus === 'sorting'
+                        sortStatus === 'sorting' || !matchHistory?.matchResults?.[0]
                             ? 'bg-gray-300 cursor-not-allowed'
                             : 'bg-blue-500 hover:bg-blue-600 text-white'
                     }`}
                 >
                     {sortStatus === 'sorting' ? 'Sorting...' : 'Sort'}
                 </button>
-                {/* Bulk Sort Button */}
-                {/* <button
-                    onClick={handleBulkSort}
-                    disabled={processing || sortStatus === 'sorting'}
-                    className={`px-3 py-1 rounded-md text-sm ${
-                        processing || sortStatus === 'sorting'
-                            ? 'bg-gray-300 cursor-not-allowed'
-                            : 'bg-coral-500 hover:bg-coral-600 text-white'
-                    }`}
-                    style={{ 
-                        backgroundColor: processing || sortStatus === 'sorting' ? '#d1d5db' : '#FF7F50',
-                        borderColor: '#FF6347'
-                    }}
-                >
-                    {processing ? 'Processing...' : 'Bulk Sort'}
-                </button> */}
             </div>
         </div>
     );
