@@ -8,6 +8,7 @@ import SingleDocumentProcessor from '../singledocumentprocessor/SingleDocumentPr
 import BulkSortManager from '../bulksort/BulkSortManager';
 import MatchDetails from '../claimquerymatrix/MatchDetails';
 import matchDisplayUtils from '../../utils/matchDisplayUtils';
+import MatchHistoryViewer from '../matchhistoryviewer/MatchHistoryViewer';
 
 const SuggestedClaims = ({ 
     selectedDocument, 
@@ -34,6 +35,8 @@ const SuggestedClaims = ({
 
     const [matchResults, setMatchResults] = useState(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [viewingHistory, setViewingHistory] = useState(null);
+
 
     const handleDocumentSelect = async (document) => {
         console.log('📄 Document selected:', document);
@@ -388,12 +391,21 @@ const SuggestedClaims = ({
                             });
                         }}
                     />
-                    <button 
-                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                        onClick={() => viewDetails(doc.OcrId)}
-                    >
-                        Details
-                    </button>
+                     <div className="flex flex-col items-center space-y-2">
+        <button 
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            onClick={() => setViewingHistory(viewingHistory === doc.OcrId ? null : doc.OcrId)}
+        >
+            {viewingHistory === doc.OcrId ? 'Hide Details' : 'Show Details'}
+        </button>
+        
+        {viewingHistory === doc.OcrId && (
+            <MatchHistoryViewer 
+                document={doc}
+                matchHistory={doc.matchHistory}
+            />
+        )}
+    </div>
                 </td>
             </tr>
         ));
@@ -407,7 +419,28 @@ const SuggestedClaims = ({
                 <th scope="col" className="px-6 py-3">Match Score</th>
                 <th scope="col" className="px-6 py-3">Best Match</th>
                 <th scope="col" className="px-6 py-3">Matched Fields</th>
-                <th scope="col" className="px-6 py-3">Actions</th>
+                <th scope="col" className="px-6 py-3 relative flex items-center justify-between">
+    <span>Actions</span>
+    <button 
+        onClick={() => window.location.reload()}
+        className="p-1.5 rounded-full hover:bg-gray-200 transition-colors duration-200 flex items-center justify-center ml-2"
+        title="Refresh"
+    >
+        <svg 
+            className="w-4 h-4 text-gray-600" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+        >
+            <path 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                strokeWidth="2" 
+                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
+            />
+        </svg>
+    </button>
+</th>
             </tr>
         </thead>
     );
@@ -577,13 +610,23 @@ const SuggestedClaims = ({
                                             });
                                         }}
                                     />
-                                     <button 
-                                        className="text-blue-600 hover:text-blue-800 text-sm font-medium"
-                                        onClick={() => viewDetails(selectedDocument.OcrId)}
-                                    >
-                                        Details
-                                    </button>
+<div className="flex flex-col items-center space-y-2">
+        <button 
+            className="text-blue-600 hover:text-blue-800 text-sm font-medium"
+            onClick={() => setViewingHistory(viewingHistory === selectedDocument.OcrId ? null : selectedDocument.OcrId)}
+        >
+            {viewingHistory === selectedDocument.OcrId ? 'Hide Details' : 'Show Details'}
+        </button>
+        
+        {viewingHistory === selectedDocument.OcrId && (
+            <MatchHistoryViewer 
+                document={selectedDocument}
+                matchHistory={selectedDocument.matchHistory}
+            />
+        )}
+    </div>
                                 </td>
+                                
                             </tr>
                         </tbody>
                     </table>
@@ -813,9 +856,9 @@ const SuggestedClaims = ({
             {/* Header Section */}
             <div className="flex items-center justify-between p-4">
                 <div className="flex items-center space-x-4">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                    {/* <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
                         {selectedDocuments.length > 0 ? 'Selected Documents' : 'Document Details'}
-                    </h2>
+                    </h2> */}
                     {/* {selectedDocuments.length > 0 && (
                         <button
                             onClick={handleBulkSort}

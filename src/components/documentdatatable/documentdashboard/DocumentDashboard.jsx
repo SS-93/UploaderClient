@@ -8,7 +8,7 @@ import SuggestedClaims from '../../suggestedclaims/SuggestedClaims';
 import { findMatchingClaims } from '../../../utils/matchingLogic';
 import SingleDocumentProcessor from '../../singledocumentprocessor/SingleDocumentProcessor';
 
-function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange, processingEnabled, selectedDocuments = [], setSelectedDocuments, onBulkSortComplete, aiMatchResults, sortResults, onProcess }) {
+function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, parkSessionId, onSelectDocument, onSelectDocumentII, onSelectionChange, processingEnabled, selectedDocuments = [], setSelectedDocuments, onBulkSortComplete, aiMatchResults, sortResults, onProcess, onSaveOcrText }) {
   const [documents, setDocuments] = useState([]);
   const [fetchedDocuments, setFetchedDocuments] = useState([]);
   const [parkedDocuments, setParkedDocuments] = useState([]);
