@@ -14,6 +14,7 @@ function ParkingSession() {
   const [uploadedDocuments, setUploadedDocuments] = useState([]);
   const [ocrText, setOcrText] = useState("");
   const [textContent, setTextContent] = useState('');
+  const [selectedDocuments, setSelectedDocuments] = useState([]);
 
   useEffect(() => {
     fetchNewlyUploadedDocuments();
@@ -137,6 +138,8 @@ function ParkingSession() {
         isAddingDocuments={isAddingDocuments}
         setIsAddingDocuments={setIsAddingDocuments}
         onViewDocument={handleDocumentView}
+        selectedDocuments={selectedDocuments}
+        setSelectedDocuments={setSelectedDocuments}
       />
       <AgnosticInterface
         documents={documents}

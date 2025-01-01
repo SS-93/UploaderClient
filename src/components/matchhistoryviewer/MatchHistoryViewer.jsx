@@ -57,7 +57,7 @@ const MatchHistoryViewer = ({ document, matchHistory }) => {
             <div className="h-2 w-full bg-gray-200 rounded">
                 <div 
                     className={`h-2 rounded ${
-                        match?.score >= 60 ? 'bg-green-500' :
+                        match?.score >= 70 ? 'bg-green-500' :
                         match?.score >= 45 ? 'bg-yellow-500' :
                         'bg-red-500'
                     }`}

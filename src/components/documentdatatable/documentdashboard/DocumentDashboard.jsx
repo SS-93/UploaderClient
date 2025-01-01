@@ -720,7 +720,7 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                             type="checkbox"
                             checked={selectedDocuments.length === documents.length}
                             onChange={handleSelectAll}
-                            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500"
+                            className="w-4 h-4 text-blue-400 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 checked:bg-blue-400 checked:border-blue-400"
                           />
                           <div className="flex items-center gap-2">
                               <span className="pl-3 text-[10px] text-gray-400 dark:text-gray-500">Select All</span>
@@ -758,16 +758,16 @@ function DocumentDashboard({ claimId, parkId, onViewDocument, onReadDocument, pa
                       cursor: 'pointer'
                     }}
                   >
-                    {selectionMode && (
-                        <td className="px-4 py-2">
-                            <input 
-                                type="checkbox"
-                                checked={selectedDocuments.includes(doc.OcrId)}
-                                onChange={() => handleSelectDocument(doc)}
-                                className="rounded border-gray-300"
-                            />
-                        </td>
-                    )}
+                   {selectionMode && (
+    <td className="px-4 py-2">
+        <input 
+            type="checkbox"
+            checked={selectedDocuments.includes(doc.OcrId)}
+            onChange={() => handleSelectDocument(doc)}
+            className="w-4 h-4 border-2 border-gray-300 rounded focus:ring-blue-500 cursor-pointer"
+        />
+    </td>
+)}
                     <th scope="row" className="px-4 py-3 font-medium text-gray-900 whitespace-nowrap dark:text-white">
                       {(isEditing || isEditingMultiple) ? (
                         <input

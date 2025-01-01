@@ -13,8 +13,8 @@ export const SCORE_WEIGHTS = {
 
 // Get the status class based on score
 export const getStatusClass = (score) => {
-    if (score >= 60) return 'bg-green-500';
-    if (score >= 45) return 'bg-yellow-500';
+    if (score >= 70) return 'bg-green-500';
+    if (score >= 69) return 'bg-yellow-500';
     return 'bg-red-500';
 };
 
